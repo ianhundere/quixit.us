@@ -44,16 +44,3 @@ func main() {
 		log.Fatal("Failed to start server:", err)
 	}
 }
-
-func isAllowedOrigin(origin string) bool {
-	allowedOrigins := []string{
-		"http://localhost:3000",
-		"https://yourdomain.com",
-	}
-	for _, allowed := range allowedOrigins {
-		if origin == allowed {
-			return true
-		}
-	}
-	return false
-} 
