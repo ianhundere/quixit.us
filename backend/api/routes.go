@@ -439,7 +439,11 @@ func listSamplePacks(c *gin.Context) {
 	currentPack, err := packService.GetCurrentPack()
 	if err != nil {
 		log.Printf("Error getting current pack: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch current pack"})
+		return
 	}
+	
+	log.Printf("Current pack: %+v", currentPack)
 	
 	pastPacks, err := packService.ListPacks(10)
 	if err != nil {
@@ -447,6 +451,8 @@ func listSamplePacks(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch sample packs"})
 		return
 	}
+	
+	log.Printf("Past packs count: %d", len(pastPacks))
 
 	c.JSON(http.StatusOK, gin.H{
 		"currentPack": currentPack,
@@ -582,12 +588,15 @@ func createSamplePack(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&pack); err != nil {
+		log.Printf("Invalid request body: %v", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
+	log.Printf("Creating new pack with title: %s", pack.Title)
 	newPack, err := packService.CreatePack()
 	if err != nil {
+		log.Printf("Failed to create pack: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create sample pack"})
 		return
 	}
@@ -596,10 +605,12 @@ func createSamplePack(c *gin.Context) {
 	newPack.Description = pack.Description
 
 	if err := db.DB.Save(newPack).Error; err != nil {
+		log.Printf("Failed to save pack: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save sample pack"})
 		return
 	}
 
+	log.Printf("Successfully created pack: %+v", newPack)
 	c.JSON(http.StatusCreated, newPack)
 }
 

@@ -26,14 +26,18 @@ func NewService(cfg *config.Config) *Service {
 
 func (s *Service) GetCurrentPack() (*models.SamplePack, error) {
 	var pack models.SamplePack
+	log.Printf("Fetching current pack...")
+	
 	err := s.db.Where("is_active = ?", true).
 		Preload("Samples").
 		First(&pack).Error
 
 	if err == gorm.ErrRecordNotFound {
-		// Return nil without error if no active pack
+		log.Printf("No active pack found")
 		return nil, nil
 	}
+	
+	log.Printf("Found active pack: %+v", pack)
 	return &pack, err
 }
 
@@ -48,10 +52,14 @@ func (s *Service) GetPack(id uint) (*models.SamplePack, error) {
 
 func (s *Service) ListPacks(limit int) ([]models.SamplePack, error) {
 	var packs []models.SamplePack
+	log.Printf("Listing packs with limit: %d", limit)
+	
 	err := s.db.Order("created_at DESC").
 		Limit(limit).
 		Preload("Samples").
 		Find(&packs).Error
+		
+	log.Printf("Found %d packs", len(packs))
 	return packs, err
 }
 

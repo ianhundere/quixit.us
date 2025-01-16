@@ -7,13 +7,14 @@ import type { Sample, Submission } from '@/types'
 
 const route = useRoute()
 const packStore = usePackStore()
-const packId = Number(route.params.id)
+const packId = parseInt(route.params.id as string)
 
 // State
 const submissions = ref<Submission[]>([])
 const currentSample = ref<Sample | null>(null)
 const audioPlayer = ref<HTMLAudioElement | null>(null)
 const isPlaying = ref(false)
+const error = ref('')
 
 // Upload state
 const uploadFile = ref<File | null>(null)
@@ -29,17 +30,21 @@ const isSubmitting = ref(false)
 
 onMounted(async () => {
   try {
-    // Fetch pack details if not in store
-    if (!packStore.currentPack || packStore.currentPack.id !== packId) {
-      const { data } = await api.packs.get(packId)
-      packStore.currentPack = data
+    if (isNaN(packId)) {
+      error.value = 'Invalid pack ID'
+      return
     }
+
+    console.log('Fetching pack:', packId)
+    const { data } = await api.packs.get(packId)
+    packStore.currentPack = data
     
     // Fetch submissions
-    const { data } = await api.submissions.list(packId)
-    submissions.value = data
-  } catch (err) {
-    console.error('Failed to fetch pack details:', err)
+    const submissionsResponse = await api.submissions.list(packId)
+    submissions.value = submissionsResponse.data
+  } catch (e: any) {
+    console.error('Failed to fetch pack details:', e)
+    error.value = e.response?.data?.error || 'Failed to load pack details'
   }
 })
 
@@ -138,6 +143,11 @@ const handleSubmissionFile = (e: Event) => {
 <template>
   <div class="min-h-screen bg-gray-50 py-8">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <!-- Error message -->
+      <div v-if="error" class="bg-red-50 text-red-600 p-4 rounded-lg mb-4">
+        {{ error }}
+      </div>
+
       <!-- Pack Details -->
       <div v-if="packStore.currentPack" class="bg-white shadow rounded-lg p-6 mb-8">
         <h1 class="text-3xl font-bold mb-4">{{ packStore.currentPack.title }}</h1>
@@ -286,6 +296,9 @@ const handleSubmissionFile = (e: Event) => {
             </div>
           </div>
         </div>
+      </div>
+      <div v-else-if="!error" class="flex justify-center py-8">
+        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
       </div>
     </div>
 

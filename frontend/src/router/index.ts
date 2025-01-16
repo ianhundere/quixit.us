@@ -24,7 +24,15 @@ const router = createRouter({
       path: '/pack/:id',
       name: 'PackDetails',
       component: () => import('@/views/PackDetails.vue'),
-      meta: { requiresAuth: true }
+      beforeEnter: (to, from, next) => {
+        const id = parseInt(to.params.id as string)
+        if (isNaN(id)) {
+          console.error('Invalid pack ID:', to.params.id)
+          next('/')
+        } else {
+          next()
+        }
+      }
     }
   ]
 })
@@ -32,8 +40,10 @@ const router = createRouter({
 // Navigation guard
 router.beforeEach((to, from, next) => {
   const auth = useAuthStore()
-  
-  if (to.meta.requiresAuth && !auth.isAuthenticated) {
+  const publicPages = ['/login', '/register']
+  const requiresAuth = !publicPages.includes(to.path)
+
+  if (requiresAuth && !auth.isAuthenticated) {
     next('/login')
   } else {
     next()
