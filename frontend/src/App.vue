@@ -29,7 +29,9 @@ const auth = useAuthStore()
       </div>
     </nav>
 
-    <router-view />
+    <div class="app-container">
+      <router-view />
+    </div>
   </div>
 </template>
 
@@ -45,5 +47,9 @@ const auth = useAuthStore()
 }
 .logo.vue:hover {
   filter: drop-shadow(0 0 2em #42b883aa);
+}
+
+.app-container {
+  padding-bottom: 70px; /* Height of the audio player plus some extra space */
 }
 </style>

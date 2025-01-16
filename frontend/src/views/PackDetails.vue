@@ -1,9 +1,11 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { usePackStore } from '@/stores/index'
 import * as api from '@/api'
 import type { Sample, Submission } from '@/types'
+import AudioPlayer from '@/components/AudioPlayer.vue'
+import { downloadFile } from '@/api'
 
 const route = useRoute()
 const packStore = usePackStore()
@@ -31,6 +33,9 @@ const isSubmitting = ref(false)
 
 const allowedTypes = ['.wav', '.mp3', '.aiff', '.flac']
 
+// Add a computed property for the auth token
+const authToken = computed(() => localStorage.getItem('access_token'))
+
 onMounted(async () => {
   try {
     if (isNaN(packId)) {
@@ -42,18 +47,18 @@ onMounted(async () => {
     const { data } = await api.packs.get(packId)
     packStore.currentPack = data
 
-    // Generate file URLs for samples
+    // Generate file URLs for samples with auth token
     if (data.samples) {
       data.samples.forEach(sample => {
-        sample.fileUrl = `/api/samples/download/${sample.ID}`
+        sample.fileUrl = `/api/samples/download/${sample.ID}?token=${authToken.value}`
       })
     }
     
-    // Fetch submissions
+    // Fetch submissions and add auth token to URLs
     const submissionsResponse = await api.submissions.list(packId)
     submissions.value = submissionsResponse.data.map(submission => ({
       ...submission,
-      fileUrl: `/api/submissions/${submission.ID}/download`
+      fileUrl: `/api/submissions/${submission.ID}/download?token=${authToken.value}`
     }))
   } catch (e: any) {
     console.error('Failed to fetch pack details:', e)
@@ -63,20 +68,13 @@ onMounted(async () => {
 
 // Sample playback
 const playSample = (sample: Sample) => {
-  if (!audioPlayer.value) return
-  
   currentSample.value = sample
-  audioPlayer.value.src = sample.fileUrl
-  audioPlayer.value.play()
   isPlaying.value = true
 }
 
 const stopSample = () => {
-  if (!audioPlayer.value) return
-  
-  audioPlayer.value.pause()
-  audioPlayer.value.currentTime = 0
   isPlaying.value = false
+  currentSample.value = null
 }
 
 // Sample upload
@@ -176,6 +174,23 @@ const handleSubmissionFile = (e: Event) => {
     submissionFile.value = target.files[0]
   }
 }
+
+// Add download handler
+const handleDownload = async (url: string, filename: string) => {
+  try {
+    const blob = await downloadFile(url)
+    const downloadUrl = window.URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = downloadUrl
+    a.download = filename
+    document.body.appendChild(a)
+    a.click()
+    window.URL.revokeObjectURL(downloadUrl)
+    document.body.removeChild(a)
+  } catch (err) {
+    console.error('Download failed:', err)
+  }
+}
 </script>
 
 <template>
@@ -230,8 +245,8 @@ const handleSubmissionFile = (e: Event) => {
                   {{ isPlaying && currentSample?.ID === sample.ID ? 'Stop' : 'Play' }}
                 </button>
                 <a
-                  :href="sample.fileUrl"
-                  download
+                  href="#"
+                  @click.prevent="handleDownload(sample.fileUrl, sample.filename)"
                   class="text-indigo-600 hover:text-indigo-800"
                 >
                   Download
@@ -325,8 +340,8 @@ const handleSubmissionFile = (e: Event) => {
                   <p class="mt-2">{{ submission.description }}</p>
                 </div>
                 <a
-                  :href="submission.fileUrl"
-                  download
+                  href="#"
+                  @click.prevent="handleDownload(submission.fileUrl, `submission_${submission.ID}.wav`)"
                   class="text-indigo-600 hover:text-indigo-800"
                 >
                   Download
@@ -342,6 +357,12 @@ const handleSubmissionFile = (e: Event) => {
     </div>
 
     <!-- Audio Player -->
-    <audio ref="audioPlayer" @ended="isPlaying = false" />
+    <AudioPlayer 
+      :sample="currentSample"
+      :isPlaying="isPlaying"
+      @playback-ended="isPlaying = false"
+      @can-play="() => {}"
+      @error="(message) => error = message"
+    />
   </div>
 </template> 

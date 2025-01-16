@@ -80,6 +80,7 @@ export const packs = {
   get: (id: number) => {
     console.log('Fetching pack:', id)
     return api.get<SamplePack>(`/samples/packs/${id}`).then(response => {
+      const token = localStorage.getItem('access_token')
       // Add file URLs to samples
       if (response.data.samples) {
         response.data.samples.forEach(sample => {
@@ -116,3 +117,15 @@ export const submissions = {
 
 // Add this temporarily to test API connection
 export const testApi = () => api.get('/health') 
+
+// Add a helper function for file downloads
+export const downloadFile = async (url: string) => {
+  const token = localStorage.getItem('access_token')
+  const response = await fetch(url, {
+    headers: {
+      'Authorization': `Bearer ${token}`
+    }
+  })
+  if (!response.ok) throw new Error('Download failed')
+  return response.blob()
+} 

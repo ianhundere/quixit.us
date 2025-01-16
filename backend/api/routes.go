@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -330,6 +331,27 @@ func uploadSample(c *gin.Context) {
 }
 
 func downloadSample(c *gin.Context) {
+	// First try auth header
+	userID := c.GetUint("userID")
+	
+	// If no user ID from auth header, try token from query params
+	if userID == 0 {
+		token := c.Query("token")
+		if token == "" {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "No authentication provided"})
+			return
+		}
+
+		claims, err := auth.ValidateToken(token)
+		if err != nil {
+			log.Printf("Invalid token: %v", err)
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token"})
+			return
+		}
+		userID = claims.UserID
+		log.Printf("Authenticated with token for user: %d", userID)
+	}
+
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid sample ID"})
@@ -342,14 +364,6 @@ func downloadSample(c *gin.Context) {
 		return
 	}
 
-	log.Printf("Attempting to serve file: %s from path: %s", sample.Filename, sample.FilePath)
-
-	// Check if user has access to this sample
-	if _, err := packService.GetPack(sample.SamplePackID); err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Sample pack not found"})
-		return
-	}
-
 	// Check if file exists
 	if _, err := os.Stat(sample.FilePath); os.IsNotExist(err) {
 		log.Printf("File not found at path: %s", sample.FilePath)
@@ -357,8 +371,27 @@ func downloadSample(c *gin.Context) {
 		return
 	}
 
+	// Set content type based on file extension
+	extension := strings.ToLower(filepath.Ext(sample.Filename))
+	switch extension {
+	case ".wav":
+		c.Header("Content-Type", "audio/wav")
+	case ".mp3":
+		c.Header("Content-Type", "audio/mpeg")
+	case ".aiff":
+		c.Header("Content-Type", "audio/aiff")
+	case ".flac":
+		c.Header("Content-Type", "audio/flac")
+	default:
+		c.Header("Content-Type", "application/octet-stream")
+	}
+
+	// Set headers for streaming
+	c.Header("Accept-Ranges", "bytes")
+	c.Header("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, sample.Filename))
+
 	// Serve the file
-	c.FileAttachment(sample.FilePath, sample.Filename)
+	c.File(sample.FilePath)
 }
 
 func createSubmission(c *gin.Context) {
