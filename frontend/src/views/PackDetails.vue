@@ -118,6 +118,21 @@ const handleSubmit = async () => {
     isSubmitting.value = false
   }
 }
+
+// Add type for file input event
+const handleFileUpload = (e: Event) => {
+  const target = e.target as HTMLInputElement
+  if (target.files) {
+    uploadFile.value = target.files[0]
+  }
+}
+
+const handleSubmissionFile = (e: Event) => {
+  const target = e.target as HTMLInputElement
+  if (target.files) {
+    submissionFile.value = target.files[0]
+  }
+}
 </script>
 
 <template>
@@ -186,7 +201,7 @@ const handleSubmit = async () => {
               <input
                 type="file"
                 accept=".wav,.mp3,.aiff,.flac"
-                @change="e => uploadFile = e.target.files?.[0]"
+                @change="handleFileUpload"
                 class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
               />
             </div>
@@ -231,7 +246,7 @@ const handleSubmit = async () => {
               <input
                 type="file"
                 accept=".wav,.mp3,.aiff,.flac"
-                @change="e => submissionFile = e.target.files?.[0]"
+                @change="handleSubmissionFile"
                 class="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
               />
             </div>

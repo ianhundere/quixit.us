@@ -31,31 +31,9 @@ func main() {
 	r := gin.Default()
 	
 	// Security middlewares
-	r.Use(middleware.CorsMiddleware())
 	r.Use(middleware.SecurityHeaders())
 	r.Use(middleware.SanitizeInputs())
 	
-	// Enable CORS
-	r.Use(func(c *gin.Context) {
-		// More restrictive CORS policy
-		if origin := c.Request.Header.Get("Origin"); origin != "" {
-			if isAllowedOrigin(origin) {
-				c.Writer.Header().Set("Access-Control-Allow-Origin", origin)
-			}
-		}
-		c.Writer.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
-		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
-		c.Writer.Header().Set("Access-Control-Max-Age", "86400")
-		c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
-		
-		if c.Request.Method == "OPTIONS" {
-			c.AbortWithStatus(204)
-			return
-		}
-		
-		c.Next()
-	})
-
 	// Rate limiting
 	r.Use(middleware.RateLimitByIP(60)) // 60 requests per minute globally
 

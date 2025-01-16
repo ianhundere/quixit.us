@@ -49,6 +49,11 @@ func SetupRoutes(r *gin.Engine) {
 	api := r.Group("/api")
 	api.Use(rateLimiter.RateLimit())
 	
+	// Health check
+	api.GET("/health", func(c *gin.Context) {
+		c.JSON(200, gin.H{"status": "ok"})
+	})
+
 	// Auth routes
 	auth := api.Group("/auth")
 	{
@@ -428,9 +433,17 @@ func getSubmission(c *gin.Context) {
 }
 
 func listSamplePacks(c *gin.Context) {
-	currentPack, _ := packService.GetCurrentPack()
+	// Add debug logging
+	log.Printf("Listing sample packs, user: %v", c.GetUint("userID"))
+	
+	currentPack, err := packService.GetCurrentPack()
+	if err != nil {
+		log.Printf("Error getting current pack: %v", err)
+	}
+	
 	pastPacks, err := packService.ListPacks(10)
 	if err != nil {
+		log.Printf("Error listing packs: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch sample packs"})
 		return
 	}

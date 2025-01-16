@@ -31,7 +31,8 @@ func (s *Service) GetCurrentPack() (*models.SamplePack, error) {
 		First(&pack).Error
 
 	if err == gorm.ErrRecordNotFound {
-		return nil, errors.NewNotFoundError("Active sample pack")
+		// Return nil without error if no active pack
+		return nil, nil
 	}
 	return &pack, err
 }

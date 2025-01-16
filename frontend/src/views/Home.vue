@@ -54,9 +54,12 @@ onMounted(() => {
           </router-link>
         </div>
       </div>
+      <div v-else class="bg-white shadow rounded-lg p-6 mb-8">
+        <p class="text-gray-600">No active sample pack at the moment.</p>
+      </div>
 
       <!-- Past Packs -->
-      <div class="bg-white shadow rounded-lg p-6">
+      <div v-if="packStore.pastPacks.length > 0" class="bg-white shadow rounded-lg p-6">
         <h2 class="text-2xl font-bold mb-4">Past Packs</h2>
         <div class="space-y-4">
           <div 
@@ -74,6 +77,9 @@ onMounted(() => {
             </router-link>
           </div>
         </div>
+      </div>
+      <div v-else class="bg-white shadow rounded-lg p-6">
+        <p class="text-gray-600">No past sample packs available.</p>
       </div>
     </div>
   </div>
