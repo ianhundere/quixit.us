@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"os"
 
 	"sample-exchange/backend/api"
 	"sample-exchange/backend/config"
@@ -13,8 +14,10 @@ import (
 )
 
 func main() {
-	// Trust only local proxy
-	gin.SetTrustedProxies([]string{"127.0.0.1"})
+	// Use debug mode in development
+	if os.Getenv("GIN_MODE") != "release" {
+		gin.SetMode(gin.DebugMode)
+	}
 
 	// Load configuration
 	cfg := config.LoadConfig()

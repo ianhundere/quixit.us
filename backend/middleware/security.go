@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"log"
 	"net/http"
 	"path/filepath"
 	"strings"
@@ -15,13 +16,14 @@ const (
 
 var (
 	allowedAudioTypes = map[string]bool{
-		"audio/wav":  true,
-		"audio/x-wav": true,
-		"audio/mp3":  true,
-		"audio/mpeg": true,
-		"audio/aiff": true,
+		"audio/wav":    true,
+		"audio/x-wav":  true,
+		"audio/mp3":    true,
+		"audio/mpeg":   true,
+		"audio/aiff":   true,
 		"audio/x-aiff": true,
-		"audio/flac": true,
+		"audio/flac":   true,
+		"application/octet-stream": true,
 	}
 
 	allowedFileExtensions = map[string]bool{
@@ -65,36 +67,10 @@ func ValidateFileUpload() gin.HandlerFunc {
 
 		// Check file extension
 		ext := strings.ToLower(filepath.Ext(file.Filename))
+		log.Printf("File extension: %s", ext)
 		if !allowedFileExtensions[ext] {
 			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{
 				"error": "Invalid file type. Allowed types: WAV, MP3, AIFF, FLAC",
-			})
-			return
-		}
-
-		// Check MIME type
-		src, err := file.Open()
-		if err != nil {
-			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
-				"error": "Failed to process file",
-			})
-			return
-		}
-		defer src.Close()
-
-		buffer := make([]byte, 512)
-		_, err = src.Read(buffer)
-		if err != nil {
-			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
-				"error": "Failed to read file",
-			})
-			return
-		}
-
-		contentType := http.DetectContentType(buffer)
-		if !allowedAudioTypes[contentType] {
-			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{
-				"error": "Invalid file type. Only audio files are allowed",
 			})
 			return
 		}

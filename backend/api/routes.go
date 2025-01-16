@@ -65,6 +65,13 @@ func SetupRoutes(r *gin.Engine) {
 		samples.GET("/download/:id", downloadSample)
 	}
 
+	// Admin routes for managing packs
+	admin := api.Group("/admin")
+	admin.Use(authMiddleware())
+	{
+		admin.POST("/packs", createSamplePack)
+	}
+
 	// Submission routes
 	submissions := api.Group("/submissions")
 	submissions.Use(authMiddleware())
@@ -258,6 +265,11 @@ func uploadSample(c *gin.Context) {
 	if err := db.DB.Create(&sample).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save to database"})
 		return
+	}
+
+	// Load relations
+	if err := db.DB.Preload("User").First(&sample, sample.ID).Error; err != nil {
+		log.Printf("Warning: Failed to load relations: %v", err)
 	}
 
 	if err := packService.AddSample(currentPack.ID, &sample); err != nil {
@@ -476,4 +488,32 @@ func voteSubmission(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "Vote recorded successfully"})
+}
+
+func createSamplePack(c *gin.Context) {
+	var pack struct {
+		Title       string `json:"title" binding:"required"`
+		Description string `json:"description"`
+	}
+
+	if err := c.ShouldBindJSON(&pack); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	newPack, err := packService.CreatePack()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create sample pack"})
+		return
+	}
+
+	newPack.Title = pack.Title
+	newPack.Description = pack.Description
+
+	if err := db.DB.Save(newPack).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save sample pack"})
+		return
+	}
+
+	c.JSON(http.StatusCreated, newPack)
 } 
