@@ -2,6 +2,7 @@ package submission
 
 import (
 	"errors"
+	"fmt"
 	"time"
 
 	"sample-exchange/backend/config"
@@ -32,7 +33,13 @@ func NewService(cfg *config.Config, packService *samplepack.Service) *Service {
 
 func (s *Service) CreateSubmission(userID uint, submission *models.Submission) error {
 	if !s.packService.IsSubmissionAllowed() {
-		return ErrSubmissionClosed
+		pack, err := s.packService.GetCurrentPack()
+		if err != nil {
+			return fmt.Errorf("no active sample pack found")
+		}
+		return fmt.Errorf("submission window is closed. Opens %s, closes %s", 
+			pack.StartDate.Format("Jan 2 15:04 MST"), 
+			pack.EndDate.Format("Jan 2 15:04 MST"))
 	}
 
 	currentPack, err := s.packService.GetCurrentPack()
@@ -61,6 +68,8 @@ func (s *Service) GetSubmission(id uint) (*models.Submission, error) {
 		return nil, err
 	}
 
+	submission.FileURL = fmt.Sprintf("/api/submissions/%d/download", submission.ID)
+
 	return &submission, nil
 }
 
@@ -68,6 +77,7 @@ func (s *Service) ListSubmissions(packID uint, limit, offset int) ([]models.Subm
 	var submissions []models.Submission
 	err := s.db.Where("sample_pack_id = ?", packID).
 		Preload("User").
+		Preload("SamplePack").
 		Order("created_at DESC").
 		Limit(limit).
 		Offset(offset).
@@ -75,6 +85,11 @@ func (s *Service) ListSubmissions(packID uint, limit, offset int) ([]models.Subm
 
 	if err != nil {
 		return nil, err
+	}
+
+	// Generate file URLs for submissions
+	for i := range submissions {
+		submissions[i].FileURL = fmt.Sprintf("/api/submissions/%d/download", submissions[i].ID)
 	}
 
 	return submissions, nil

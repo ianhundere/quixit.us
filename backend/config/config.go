@@ -39,6 +39,10 @@ type Config struct {
 
 	// Storage settings
 	StoragePath string
+
+	// Development settings
+	DevMode            bool
+	BypassTimeWindows bool
 }
 
 func LoadConfig() *Config {
@@ -86,6 +90,10 @@ func LoadConfig() *Config {
 		PasswordMaxLength:  72, // bcrypt max
 		MaxLoginAttempts:   5,
 		LockoutDuration:    15 * time.Minute,
+
+		// Development settings
+		DevMode:            os.Getenv("DEV_MODE") == "true",
+		BypassTimeWindows: os.Getenv("DEV_BYPASS_TIME_WINDOWS") == "true",
 	}
 }
 

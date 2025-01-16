@@ -73,13 +73,14 @@ func SetupRoutes(r *gin.Engine) {
 	admin.Use(authMiddleware())
 	{
 		admin.POST("/packs", createSamplePack)
+		admin.PATCH("/packs/:id/windows", updatePackWindows)
 	}
 
 	// Submission routes
 	submissions := api.Group("/submissions")
 	submissions.Use(authMiddleware())
 	{
-		submissions.POST("", createSubmission)
+		submissions.POST("", middleware.ValidateFileUpload(), createSubmission)
 		submissions.GET("", listSubmissions)
 		submissions.GET("/:id", getSubmission)
 		submissions.GET("/:id/download", downloadSubmission)
@@ -587,4 +588,51 @@ func createSamplePack(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusCreated, newPack)
+}
+
+func updatePackWindows(c *gin.Context) {
+	var req struct {
+		UploadStart *time.Time `json:"uploadStart"`
+		UploadEnd   *time.Time `json:"uploadEnd"`
+		StartDate   *time.Time `json:"startDate"`
+		EndDate     *time.Time `json:"endDate"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid pack ID"})
+		return
+	}
+
+	var pack models.SamplePack
+	if err := db.DB.First(&pack, id).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Pack not found"})
+		return
+	}
+
+	// Update only provided fields
+	if req.UploadStart != nil {
+		pack.UploadStart = *req.UploadStart
+	}
+	if req.UploadEnd != nil {
+		pack.UploadEnd = *req.UploadEnd
+	}
+	if req.StartDate != nil {
+		pack.StartDate = *req.StartDate
+	}
+	if req.EndDate != nil {
+		pack.EndDate = *req.EndDate
+	}
+
+	if err := db.DB.Save(&pack).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update pack"})
+		return
+	}
+
+	c.JSON(http.StatusOK, pack)
 } 

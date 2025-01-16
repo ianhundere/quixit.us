@@ -1,6 +1,7 @@
 package samplepack
 
 import (
+	"log"
 	"time"
 
 	"sample-exchange/backend/config"
@@ -54,32 +55,80 @@ func (s *Service) ListPacks(limit int) ([]models.SamplePack, error) {
 }
 
 func (s *Service) CreatePack() (*models.SamplePack, error) {
-	// Deactivate current active pack if exists
-	s.db.Model(&models.SamplePack{}).
-		Where("is_active = ?", true).
-		Update("is_active", false)
+	// Deactivate any currently active packs
+	s.db.Model(&models.SamplePack{}).Where("is_active = ?", true).Update("is_active", false)
 
-	// Create new pack
+	// Calculate time windows
+	now := time.Now()
+	
+	// Find next Friday 00:00
+	uploadStart := nextWeekday(now, time.Friday)
+	uploadStart = time.Date(uploadStart.Year(), uploadStart.Month(), uploadStart.Day(), 0, 0, 0, 0, uploadStart.Location())
+	
+	// Sunday 23:59:59
+	uploadEnd := uploadStart.Add(72 * time.Hour).Add(-1 * time.Second)
+	
+	// Next Monday 00:00
+	startDate := nextWeekday(uploadEnd, time.Monday)
+	startDate = time.Date(startDate.Year(), startDate.Month(), startDate.Day(), 0, 0, 0, 0, startDate.Location())
+	
+	// Friday 00:00
+	endDate := startDate.Add(96 * time.Hour)
+
 	pack := &models.SamplePack{
-		StartDate: time.Now(),
-		EndDate:   time.Now().Add(s.config.UploadDuration),
-		IsActive:  true,
+		Title:       "",  // Will be set by caller
+		Description: "",  // Will be set by caller
+		UploadStart: uploadStart,
+		UploadEnd:   uploadEnd,
+		StartDate:   startDate,
+		EndDate:     endDate,
+		IsActive:    true,
 	}
 
-	err := s.db.Create(pack).Error
-	return pack, err
+	return pack, s.db.Create(pack).Error
+}
+
+// Helper function to find next occurrence of a weekday
+func nextWeekday(t time.Time, weekday time.Weekday) time.Time {
+	daysUntil := int(weekday - t.Weekday())
+	if daysUntil <= 0 {
+		daysUntil += 7
+	}
+	return t.AddDate(0, 0, daysUntil)
 }
 
 func (s *Service) IsUploadAllowed() bool {
+	if s.config.BypassTimeWindows {
+		return true
+	}
+
 	now := time.Now()
-	return now.Weekday() == s.config.UploadStartDay ||
-		now.Before(time.Now().Add(s.config.UploadDuration))
+	pack, err := s.GetCurrentPack()
+	if err != nil {
+		return false
+	}
+	log.Printf("Upload window: %s to %s (now: %s)", 
+		pack.UploadStart.Format(time.RFC3339),
+		pack.UploadEnd.Format(time.RFC3339),
+		now.Format(time.RFC3339))
+	return now.After(pack.UploadStart) && now.Before(pack.UploadEnd)
 }
 
 func (s *Service) IsSubmissionAllowed() bool {
+	if s.config.BypassTimeWindows {
+		return true
+	}
+
 	now := time.Now()
-	return now.Weekday() == s.config.SubmissionStartDay ||
-		now.Before(time.Now().Add(s.config.SubmissionDuration))
+	pack, err := s.GetCurrentPack()
+	if err != nil {
+		return false
+	}
+	log.Printf("Submission window: %s to %s (now: %s)", 
+		pack.StartDate.Format(time.RFC3339),
+		pack.EndDate.Format(time.RFC3339),
+		now.Format(time.RFC3339))
+	return now.After(pack.StartDate) && now.Before(pack.EndDate)
 }
 
 func (s *Service) AddSample(packID uint, sample *models.Sample) error {

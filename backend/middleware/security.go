@@ -1,7 +1,6 @@
 package middleware
 
 import (
-	"log"
 	"net/http"
 	"path/filepath"
 	"strings"
@@ -67,7 +66,6 @@ func ValidateFileUpload() gin.HandlerFunc {
 
 		// Check file extension
 		ext := strings.ToLower(filepath.Ext(file.Filename))
-		log.Printf("File extension: %s", ext)
 		if !allowedFileExtensions[ext] {
 			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{
 				"error": "Invalid file type. Allowed types: WAV, MP3, AIFF, FLAC",
