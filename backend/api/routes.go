@@ -1,6 +1,7 @@
 package api
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 	"strconv"
@@ -268,9 +269,12 @@ func uploadSample(c *gin.Context) {
 	}
 
 	// Load relations
-	if err := db.DB.Preload("User").First(&sample, sample.ID).Error; err != nil {
+	if err := db.DB.Preload("User").Preload("SamplePack").First(&sample, sample.ID).Error; err != nil {
 		log.Printf("Warning: Failed to load relations: %v", err)
 	}
+
+	// Generate file URL
+	sample.FileURL = fmt.Sprintf("/api/samples/download/%d", sample.ID)
 
 	if err := packService.AddSample(currentPack.ID, &sample); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to add sample to pack"})
