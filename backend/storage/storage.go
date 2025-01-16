@@ -5,9 +5,10 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"time"
 
 	"sample-exchange/backend/config"
+
+	"github.com/google/uuid"
 )
 
 type Storage struct {
@@ -21,17 +22,16 @@ func NewStorage(cfg *config.Config) *Storage {
 }
 
 func (s *Storage) SaveSample(file io.Reader, filename string) (string, error) {
-	// Create year/month based directory structure
-	now := time.Now()
-	dirPath := filepath.Join(s.basePath, "samples", fmt.Sprintf("%d/%02d", now.Year(), now.Month()))
-	if err := os.MkdirAll(dirPath, 0755); err != nil {
-		return "", fmt.Errorf("failed to create directory: %w", err)
+	// Create storage directory if it doesn't exist
+	if err := os.MkdirAll(s.basePath, 0755); err != nil {
+		return "", fmt.Errorf("failed to create storage directory: %w", err)
 	}
 
-	// Generate unique filename
-	filePath := filepath.Join(dirPath, fmt.Sprintf("%d_%s", now.Unix(), filename))
+	// Generate unique filename to avoid collisions
+	uniqueFilename := fmt.Sprintf("%s_%s", uuid.New().String(), filename)
+	filePath := filepath.Join(s.basePath, uniqueFilename)
 
-	// Create the file
+	// Create the destination file
 	dst, err := os.Create(filePath)
 	if err != nil {
 		return "", fmt.Errorf("failed to create file: %w", err)

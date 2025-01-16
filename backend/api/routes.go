@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -248,6 +249,7 @@ func uploadSample(c *gin.Context) {
 
 	// Save the file using our storage package
 	filePath, err := store.SaveSample(src, file.Filename)
+	log.Printf("Saved file to path: %s", filePath)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save file"})
 		return
@@ -285,8 +287,35 @@ func uploadSample(c *gin.Context) {
 }
 
 func downloadSample(c *gin.Context) {
-	// TODO: Implement file download logic
-	c.JSON(http.StatusOK, gin.H{"message": "Download endpoint"})
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid sample ID"})
+		return
+	}
+
+	var sample models.Sample
+	if err := db.DB.First(&sample, id).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Sample not found"})
+		return
+	}
+
+	log.Printf("Attempting to serve file: %s from path: %s", sample.Filename, sample.FilePath)
+
+	// Check if user has access to this sample
+	if _, err := packService.GetPack(sample.SamplePackID); err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Sample pack not found"})
+		return
+	}
+
+	// Check if file exists
+	if _, err := os.Stat(sample.FilePath); os.IsNotExist(err) {
+		log.Printf("File not found at path: %s", sample.FilePath)
+		c.JSON(http.StatusNotFound, gin.H{"error": "File not found"})
+		return
+	}
+
+	// Serve the file
+	c.FileAttachment(sample.FilePath, sample.Filename)
 }
 
 func createSubmission(c *gin.Context) {
