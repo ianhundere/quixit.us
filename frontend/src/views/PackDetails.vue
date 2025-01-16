@@ -41,8 +41,37 @@ const authToken = computed(() => localStorage.getItem('access_token'))
 
 const downloadingFiles = ref(new Set<string>())
 
+// Add loading state
+const isLoading = ref(true)
+
+const formatDate = (date: string) => {
+  return new Date(date).toLocaleString('en-US', {
+    weekday: 'short',
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  })
+}
+
+const validateFile = (file: File) => {
+  const extension = file.name.substring(file.name.lastIndexOf('.')).toLowerCase()
+  
+  if (!allowedTypes.includes(extension)) {
+    return `Invalid file type. Allowed types: ${allowedTypes.join(', ')}`
+  }
+  
+  if (file.size > 50 * 1024 * 1024) {
+    return 'File size must be less than 50MB'
+  }
+  
+  return null
+}
+
 onMounted(async () => {
   try {
+    isLoading.value = true
     if (isNaN(packId)) {
       error.value = 'Invalid pack ID'
       return
@@ -68,6 +97,8 @@ onMounted(async () => {
   } catch (e: any) {
     console.error('Failed to fetch pack details:', e)
     error.value = e.response?.data?.error || 'Failed to load pack details'
+  } finally {
+    isLoading.value = false
   }
 })
 
@@ -175,16 +206,9 @@ const handleFileSelected = (file: File | null) => {
     return
   }
 
-  const extension = file.name.substring(file.name.lastIndexOf('.')).toLowerCase()
-  
-  if (!allowedTypes.includes(extension)) {
-    uploadError.value = `Invalid file type. Allowed types: ${allowedTypes.join(', ')}`
-    uploadFile.value = null
-    return
-  }
-  
-  if (file.size > 50 * 1024 * 1024) {
-    uploadError.value = 'File size must be less than 50MB'
+  const error = validateFile(file)
+  if (error) {
+    uploadError.value = error
     uploadFile.value = null
     return
   }
@@ -200,16 +224,9 @@ const handleSubmissionFileSelected = (file: File | null) => {
     return
   }
 
-  const extension = file.name.substring(file.name.lastIndexOf('.')).toLowerCase()
-  
-  if (!allowedTypes.includes(extension)) {
-    submissionError.value = `Invalid file type. Allowed types: ${allowedTypes.join(', ')}`
-    submissionFile.value = null
-    return
-  }
-  
-  if (file.size > 50 * 1024 * 1024) {
-    submissionError.value = 'File size must be less than 50MB'
+  const error = validateFile(file)
+  if (error) {
+    submissionError.value = error
     submissionFile.value = null
     return
   }
@@ -258,15 +275,15 @@ const handleDownload = async (url: string, filename: string) => {
         <div class="grid grid-cols-2 gap-4 text-sm text-gray-600 mb-8">
           <div>
             <p class="font-semibold">Upload Window:</p>
-            <p>{{ new Date(packStore.currentPack.uploadStart).toLocaleString() }}</p>
+            <p>{{ formatDate(packStore.currentPack.uploadStart) }}</p>
             <p>to</p>
-            <p>{{ new Date(packStore.currentPack.uploadEnd).toLocaleString() }}</p>
+            <p>{{ formatDate(packStore.currentPack.uploadEnd) }}</p>
           </div>
           <div>
             <p class="font-semibold">Submission Window:</p>
-            <p>{{ new Date(packStore.currentPack.startDate).toLocaleString() }}</p>
+            <p>{{ formatDate(packStore.currentPack.startDate) }}</p>
             <p>to</p>
-            <p>{{ new Date(packStore.currentPack.endDate).toLocaleString() }}</p>
+            <p>{{ formatDate(packStore.currentPack.endDate) }}</p>
           </div>
         </div>
 
@@ -274,6 +291,9 @@ const handleDownload = async (url: string, filename: string) => {
         <div class="mb-8">
           <h2 class="text-2xl font-bold mb-4">Samples</h2>
           <div class="space-y-4">
+            <div v-if="!packStore.currentPack.samples?.length" class="text-gray-500 text-center py-4">
+              No samples uploaded yet.
+            </div>
             <div 
               v-for="sample in packStore.currentPack.samples" 
               :key="sample.ID"
@@ -377,6 +397,9 @@ const handleDownload = async (url: string, filename: string) => {
 
           <!-- Submission List -->
           <div class="space-y-4">
+            <div v-if="!submissions.length" class="text-gray-500 text-center py-4">
+              No submissions yet.
+            </div>
             <div 
               v-for="submission in submissions" 
               :key="submission.ID"
@@ -401,7 +424,7 @@ const handleDownload = async (url: string, filename: string) => {
           </div>
         </div>
       </div>
-      <div v-else-if="!error" class="flex justify-center py-8">
+      <div v-else-if="isLoading" class="flex justify-center py-8">
         <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
       </div>
     </div>

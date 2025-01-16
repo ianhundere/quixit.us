@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import type { RouteLocationNormalized, NavigationGuardNext } from 'vue-router'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -21,17 +22,11 @@ const router = createRouter({
       component: () => import('@/views/Register.vue')
     },
     {
-      path: '/pack/:id',
-      name: 'PackDetails',
+      path: '/packs/:id',
+      name: 'pack-details',
       component: () => import('@/views/PackDetails.vue'),
-      beforeEnter: (to, from, next) => {
-        const id = parseInt(to.params.id as string)
-        if (isNaN(id)) {
-          console.error('Invalid pack ID:', to.params.id)
-          next('/')
-        } else {
-          next()
-        }
+      beforeEnter: (_to: RouteLocationNormalized, _from: RouteLocationNormalized, next: NavigationGuardNext) => {
+        next()
       }
     }
   ]

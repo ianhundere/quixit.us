@@ -59,7 +59,7 @@ onMounted(() => {
             </div>
 
             <router-link 
-              :to="`/pack/${packStore.currentPack.ID}`"
+              :to="`/packs/${packStore.currentPack.ID}`"
               class="inline-block bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700"
             >
               View Details
@@ -82,7 +82,7 @@ onMounted(() => {
               <h3 class="text-xl">{{ pack.title }}</h3>
               <p class="text-gray-600">{{ pack.description }}</p>
               <router-link 
-                :to="`/pack/${pack.ID}`"
+                :to="`/packs/${pack.ID}`"
                 class="text-indigo-600 hover:text-indigo-800"
               >
                 View Details →

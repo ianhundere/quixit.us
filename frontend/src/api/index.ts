@@ -80,8 +80,6 @@ export const packs = {
   get: (id: number) => {
     console.log('Fetching pack:', id)
     return api.get<SamplePack>(`/samples/packs/${id}`).then(response => {
-      const token = localStorage.getItem('access_token')
-      // Add file URLs to samples
       if (response.data.samples) {
         response.data.samples.forEach(sample => {
           sample.fileUrl = `/api/samples/download/${sample.ID}`

@@ -2,6 +2,11 @@ import { defineStore } from 'pinia'
 import type { SamplePack } from '@/types'
 import * as api from '@/api'
 
+export interface PackState {
+  currentPack: SamplePack | null
+  pastPacks: SamplePack[]
+}
+
 export const usePackStore = defineStore('pack', {
   state: () => ({
     currentPack: null as SamplePack | null,

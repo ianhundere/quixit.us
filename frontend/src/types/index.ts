@@ -1,10 +1,20 @@
 export interface User {
-  id: number
+  ID: number
   email: string
 }
 
+export interface Sample {
+  ID: number
+  filename: string
+  fileSize: number
+  fileUrl?: string
+  uploadedAt: string
+  userId: number
+  user: User
+}
+
 export interface SamplePack {
-  id: number
+  ID: number
   title: string
   description: string
   startDate: string
@@ -15,25 +25,10 @@ export interface SamplePack {
   samples: Sample[]
 }
 
-export interface Sample {
-  id: number
-  filename: string
-  fileSize: number
-  fileUrl: string
-  uploadedAt: string
-  userId: number
-  user: User
-}
-
 export interface Submission {
-  id: number
+  ID: number
   title: string
   description: string
-  fileUrl: string
-  fileSize: number
-  submittedAt: string
-  userId: number
+  fileUrl?: string
   user: User
-  samplePackId: number
-  samplePack: SamplePack
 } 

@@ -2,22 +2,22 @@ import { defineStore } from 'pinia'
 import type { User } from '@/types'
 import * as api from '@/api'
 
-interface AuthResponse {
-  access_token: string
-  refresh_token: string
-  user: User
+interface AuthState {
+  user: User | null
+  token: string | null
+  isAuthenticated: boolean
+  loading: boolean
+  error: string | null
 }
 
 export const useAuthStore = defineStore('auth', {
-  state: () => ({
-    user: null as User | null,
+  state: (): AuthState => ({
+    user: null,
+    token: null,
+    isAuthenticated: false,
     loading: false,
-    error: null as string | null
+    error: null
   }),
-
-  getters: {
-    isAuthenticated: (state) => !!state.user
-  },
 
   actions: {
     async login(email: string, password: string) {
@@ -33,6 +33,8 @@ export const useAuthStore = defineStore('auth', {
         }
 
         this.user = data.user
+        this.token = data.access_token
+        this.isAuthenticated = true
         localStorage.setItem('access_token', data.access_token)
         return data
       } catch (err: any) {
@@ -46,6 +48,8 @@ export const useAuthStore = defineStore('auth', {
 
     logout() {
       this.user = null
+      this.token = null
+      this.isAuthenticated = false
       localStorage.removeItem('access_token')
     }
   }
