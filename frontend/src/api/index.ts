@@ -5,7 +5,7 @@ const baseURL = import.meta.env.VITE_API_URL
 console.log('API Base URL:', baseURL)
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL,
+  baseURL: '/api',
   headers: {
     'Content-Type': 'application/json',
     'Accept': 'application/json'
@@ -89,10 +89,15 @@ export const packs = {
       return response
     })
   },
-  uploadSample: (file: File) => {
+  uploadSample: (packId: number, file: File) => {
+    console.log('Uploading sample for pack:', packId)
     const formData = new FormData()
     formData.append('file', file)
-    return api.post<Sample>('/samples/upload', formData)
+    return api.post<Sample>(`/samples/packs/${packId}/upload`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    })
   }
 }
 

@@ -32,6 +32,8 @@ var rateLimiter *middleware.RateLimiter
 var packService *samplepack.Service
 var submissionService *submission.Service
 
+const maxFileSize = 50 * 1024 * 1024 // 50MB
+
 func Init(r *gin.Engine, s *storage.Storage, cfg *config.Config) {
 	store = s
 	emailService = email.NewEmailService(cfg)
@@ -69,7 +71,7 @@ func SetupRoutes(r *gin.Engine) {
 	{
 		samples.GET("/packs", listSamplePacks)
 		samples.GET("/packs/:id", getSamplePack)
-		samples.POST("/upload", middleware.ValidateFileUpload(), uploadSample)
+		samples.POST("/packs/:id/upload", middleware.ValidateFileUpload(), uploadSample)
 		samples.GET("/download/:id", downloadSample)
 	}
 
@@ -230,26 +232,60 @@ func loginUser(c *gin.Context) {
 }
 
 func uploadSample(c *gin.Context) {
+	log.Printf("Upload request received for pack ID: %s", c.Param("id"))
+	
 	if !packService.IsUploadAllowed() {
+		log.Printf("Upload window is closed")
 		c.Error(errors.NewAuthorizationError("Upload window is closed"))
 		return
 	}
 
-	currentPack, err := packService.GetCurrentPack()
+	// Get pack ID from URL parameter
+	packID, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
-		c.Error(errors.NewNotFoundError("Active sample pack"))
+		log.Printf("Invalid pack ID: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid pack ID"})
 		return
 	}
 
-	file, err := c.FormFile("file")
+	log.Printf("Processing upload for pack ID: %d", packID)
+
+	// Get the pack and verify it exists
+	pack, err := packService.GetPack(uint(packID))
 	if err != nil {
-		c.Error(errors.NewValidationError("file", "No file provided"))
+		log.Printf("Failed to get pack: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Pack not found"})
 		return
 	}
+
+	// Verify pack is active
+	if !pack.IsActive {
+		log.Printf("Attempted to upload to inactive pack: %d", packID)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Pack is not active"})
+		return
+	}
+
+	// Get the uploaded file
+	file, err := c.FormFile("file")
+	if err != nil {
+		log.Printf("No file provided: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "No file provided"})
+		return
+	}
+
+	// Validate file size
+	if file.Size > maxFileSize {
+		log.Printf("File too large: %d bytes", file.Size)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "File size must be less than 50MB"})
+		return
+	}
+
+	log.Printf("Received file: %s, size: %d bytes", file.Filename, file.Size)
 
 	// Open the uploaded file
 	src, err := file.Open()
 	if err != nil {
+		log.Printf("Failed to read file: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to read file"})
 		return
 	}
@@ -257,40 +293,39 @@ func uploadSample(c *gin.Context) {
 
 	// Save the file using our storage package
 	filePath, err := store.SaveSample(src, file.Filename)
-	log.Printf("Saved file to path: %s", filePath)
 	if err != nil {
+		log.Printf("Failed to save file: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save file"})
 		return
 	}
+	log.Printf("Saved file to path: %s", filePath)
 
+	// Create sample record
 	sample := models.Sample{
-		Filename:   file.Filename,
-		FileSize:   file.Size,
-		UploadedAt: time.Now(),
-		FilePath:   filePath,
-		UserID:     c.GetUint("userID"),
-		SamplePackID: currentPack.ID,
+		Filename:     file.Filename,
+		FileSize:     file.Size,
+		UploadedAt:   time.Now(),
+		FilePath:     filePath,
+		UserID:       c.GetUint("userID"),
+		SamplePackID: uint(packID),
 	}
 
 	// Save to database
 	if err := db.DB.Create(&sample).Error; err != nil {
+		log.Printf("Failed to save to database: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save to database"})
 		return
 	}
 
 	// Load relations
-	if err := db.DB.Preload("User").Preload("SamplePack").First(&sample, sample.ID).Error; err != nil {
+	if err := db.DB.Preload("User").First(&sample, sample.ID).Error; err != nil {
 		log.Printf("Warning: Failed to load relations: %v", err)
 	}
 
 	// Generate file URL
 	sample.FileURL = fmt.Sprintf("/api/samples/download/%d", sample.ID)
 
-	if err := packService.AddSample(currentPack.ID, &sample); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to add sample to pack"})
-		return
-	}
-
+	log.Printf("Successfully uploaded sample: %+v", sample)
 	c.JSON(http.StatusCreated, sample)
 }
 

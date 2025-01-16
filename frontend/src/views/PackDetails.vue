@@ -20,6 +20,7 @@ const error = ref('')
 const uploadFile = ref<File | null>(null)
 const uploadError = ref('')
 const isUploading = ref(false)
+const uploadSuccess = ref(false)
 
 // Submission state
 const submissionTitle = ref('')
@@ -27,6 +28,8 @@ const submissionDescription = ref('')
 const submissionFile = ref<File | null>(null)
 const submissionError = ref('')
 const isSubmitting = ref(false)
+
+const allowedTypes = ['.wav', '.mp3', '.aiff', '.flac']
 
 onMounted(async () => {
   try {
@@ -83,18 +86,27 @@ const handleUpload = async () => {
     return
   }
 
+  if (!packId) {
+    uploadError.value = 'Invalid pack ID'
+    return
+  }
+
   isUploading.value = true
   uploadError.value = ''
+  uploadSuccess.value = false
 
   try {
-    await api.packs.uploadSample(uploadFile.value)
+    console.log('Uploading file:', uploadFile.value.name, 'to pack:', packId)
+    await api.packs.uploadSample(packId, uploadFile.value)
     uploadFile.value = null
+    uploadSuccess.value = true
+    
     // Refresh pack details to show new sample
     const { data } = await api.packs.get(packId)
     packStore.currentPack = data
-  } catch (err) {
-    uploadError.value = 'Upload failed'
+  } catch (err: any) {
     console.error('Upload error:', err)
+    uploadError.value = err.response?.data?.error || 'Upload failed'
   } finally {
     isUploading.value = false
   }
@@ -138,7 +150,23 @@ const handleSubmit = async () => {
 const handleFileUpload = (e: Event) => {
   const target = e.target as HTMLInputElement
   if (target.files) {
-    uploadFile.value = target.files[0]
+    const file = target.files[0]
+    const extension = file.name.substring(file.name.lastIndexOf('.')).toLowerCase()
+    
+    if (!allowedTypes.includes(extension)) {
+      uploadError.value = `Invalid file type. Allowed types: ${allowedTypes.join(', ')}`
+      target.value = '' // Clear the input
+      return
+    }
+    
+    if (file.size > 50 * 1024 * 1024) {
+      uploadError.value = 'File size must be less than 50MB'
+      target.value = ''
+      return
+    }
+    
+    uploadFile.value = file
+    uploadError.value = ''
   }
 }
 
@@ -226,6 +254,7 @@ const handleSubmissionFile = (e: Event) => {
               />
             </div>
             <div v-if="uploadError" class="text-red-500">{{ uploadError }}</div>
+            <div v-if="uploadSuccess" class="text-green-500">Upload successful!</div>
             <button
               type="submit"
               :disabled="isUploading || !uploadFile"

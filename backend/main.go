@@ -30,12 +30,12 @@ func main() {
 
 	r := gin.Default()
 	
-	// Security middlewares
+	// Security middlewares - only need one CORS handler
 	r.Use(middleware.SecurityHeaders())
 	r.Use(middleware.SanitizeInputs())
 	
 	// Rate limiting
-	r.Use(middleware.RateLimitByIP(60)) // 60 requests per minute globally
+	r.Use(middleware.RateLimitByIP(60))
 
 	// Setup routes
 	api.Init(r, store, cfg)
