@@ -31,6 +31,7 @@ func main() {
 	r := gin.Default()
 	
 	// Security middlewares
+	r.Use(middleware.CorsMiddleware())
 	r.Use(middleware.SecurityHeaders())
 	r.Use(middleware.SanitizeInputs())
 	

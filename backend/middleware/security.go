@@ -36,6 +36,11 @@ var (
 // SecurityHeaders adds security-related headers to all responses
 func SecurityHeaders() gin.HandlerFunc {
 	return func(c *gin.Context) {
+		// CORS headers
+		c.Header("Access-Control-Allow-Origin", "*")
+		c.Header("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
+		c.Header("Access-Control-Allow-Headers", "Origin, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
+
 		c.Header("X-Content-Type-Options", "nosniff")
 		c.Header("X-Frame-Options", "DENY")
 		c.Header("X-XSS-Protection", "1; mode=block")
@@ -112,4 +117,15 @@ func sanitize(input string) string {
 	input = strings.ReplaceAll(input, "\"", "&quot;")
 	input = strings.ReplaceAll(input, ";", "&#59;")
 	return input
+}
+
+// Handle CORS preflight requests
+func CorsMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if c.Request.Method == "OPTIONS" {
+			c.AbortWithStatus(204)
+			return
+		}
+		c.Next()
+	}
 } 
