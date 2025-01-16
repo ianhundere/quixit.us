@@ -13,6 +13,9 @@ import (
 )
 
 func main() {
+	// Trust only local proxy
+	gin.SetTrustedProxies([]string{"127.0.0.1"})
+
 	// Load configuration
 	cfg := config.LoadConfig()
 
