@@ -14,8 +14,8 @@ type User struct {
 	Email        string `gorm:"uniqueIndex;not null"`
 	PasswordHash string `gorm:"not null"`
 	Verified     bool   `gorm:"default:false"`
-	VerifyToken  string `gorm:"size:100"`
-	RefreshToken string `gorm:"size:100"`
+	VerifyToken  string `gorm:"size:255"`
+	RefreshToken string `gorm:"size:500"`
 	LoginAttempts int      `gorm:"default:0"`
 	LockedUntil   *time.Time
 }

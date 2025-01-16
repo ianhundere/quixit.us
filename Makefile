@@ -1,4 +1,4 @@
-.PHONY: run build test clean db-up db-down
+.PHONY: run build test clean db-up db-down db-reset reset
 
 run:
 	go run ./backend/main.go
@@ -19,5 +19,12 @@ db-up:
 db-down:
 	docker-compose down
 
+db-reset:
+	docker-compose down -v
+	docker-compose up -d
+	sleep 3  # Wait for database to be ready
+
+reset: db-reset setup
+
 setup: db-up
-	mkdir -p storage 
+	mkdir -p storage
