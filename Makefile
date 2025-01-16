@@ -48,6 +48,8 @@ build-backend:
 db-up:
 	@echo "Starting database..."
 	docker-compose up -d
+	@echo "Waiting for database to be ready..."
+	@until docker-compose ps postgres | grep -q "healthy"; do sleep 1; done
 
 db-down:
 	@echo "Stopping database..."
@@ -58,7 +60,7 @@ db-reset:
 	docker-compose down -v
 	docker-compose up -d
 	@echo "Waiting for database to be ready..."
-	sleep 3
+	@until docker-compose ps postgres | grep -q "healthy"; do sleep 1; done
 
 # Cleanup
 clean:
