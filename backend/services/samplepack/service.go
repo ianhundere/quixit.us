@@ -10,17 +10,22 @@ import (
 	"sample-exchange/backend/errors"
 	"sample-exchange/backend/models"
 
+	"archive/zip"
+	"fmt"
+	"io"
+	"os"
+
 	"gorm.io/gorm"
 )
 
 type Service struct {
-	config *config.Config
+	cfg *config.Config
 	db     *gorm.DB
 }
 
 func NewService(cfg *config.Config) *Service {
 	return &Service{
-		config: cfg,
+		cfg: cfg,
 		db:     db.DB,
 	}
 }
@@ -99,7 +104,7 @@ func nextWeekday(t time.Time, weekday time.Weekday) time.Time {
 }
 
 func (s *Service) IsUploadAllowed() bool {
-	if s.config.BypassTimeWindows {
+	if s.cfg.BypassTimeWindows {
 		return true
 	}
 
@@ -116,7 +121,7 @@ func (s *Service) IsUploadAllowed() bool {
 }
 
 func (s *Service) IsSubmissionAllowed() bool {
-	if s.config.BypassTimeWindows {
+	if s.cfg.BypassTimeWindows {
 		return true
 	}
 
@@ -143,4 +148,52 @@ func (s *Service) AddSample(packID uint, sample *models.Sample) error {
 	}
 
 	return s.db.Model(pack).Association("Samples").Append(sample)
+}
+
+// CreatePackZip creates a zip file containing all samples in a pack
+func (s *Service) CreatePackZip(pack models.SamplePack, zipPath string) error {
+	log.Printf("Creating zip file for pack %d with %d samples", pack.ID, len(pack.Samples))
+	
+	// Create the zip file
+	zipFile, err := os.Create(zipPath)
+	if err != nil {
+		log.Printf("Failed to create zip file at %s: %v", zipPath, err)
+		return fmt.Errorf("failed to create zip file: %w", err)
+	}
+	defer zipFile.Close()
+
+	// Create a new zip writer
+	zipWriter := zip.NewWriter(zipFile)
+	defer zipWriter.Close()
+
+	// Add each sample to the zip
+	for _, sample := range pack.Samples {
+		log.Printf("Adding sample %d (%s) from %s", sample.ID, sample.Filename, sample.FilePath)
+		
+		// Open the sample file using the stored file path
+		sampleFile, err := os.Open(sample.FilePath)
+		if err != nil {
+			log.Printf("Failed to open sample file %d at %s: %v", sample.ID, sample.FilePath, err)
+			return fmt.Errorf("failed to open sample file %d: %w", sample.ID, err)
+		}
+		defer sampleFile.Close()
+
+		// Create a new file in the zip
+		zipEntry, err := zipWriter.Create(sample.Filename)
+		if err != nil {
+			log.Printf("Failed to create zip entry for sample %d: %v", sample.ID, err)
+			return fmt.Errorf("failed to create zip entry for sample %d: %w", sample.ID, err)
+		}
+
+		// Copy the sample file into the zip
+		if _, err := io.Copy(zipEntry, sampleFile); err != nil {
+			log.Printf("Failed to copy sample %d to zip: %v", sample.ID, err)
+			return fmt.Errorf("failed to copy sample %d to zip: %w", sample.ID, err)
+		}
+		
+		log.Printf("Successfully added sample %d to zip", sample.ID)
+	}
+
+	log.Printf("Successfully created zip file at %s", zipPath)
+	return nil
 } 

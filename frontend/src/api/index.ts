@@ -18,6 +18,12 @@ export const packs = {
                 'Content-Type': 'multipart/form-data'
             }
         })
+    },
+    downloadPack: async (packId: number): Promise<Blob> => {
+        const response = await client.get(`/samples/packs/${packId}/download`, {
+            responseType: 'blob'
+        });
+        return response.data;
     }
 }
 

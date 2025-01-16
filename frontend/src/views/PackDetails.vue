@@ -40,6 +40,7 @@ const acceptString = allowedTypes.join(',')
 const authToken = computed(() => localStorage.getItem('access_token'))
 
 const downloadingFiles = ref(new Set<string>())
+const isDownloadingPack = ref(false)
 
 // Add loading state
 const isLoading = ref(true)
@@ -256,6 +257,29 @@ const handleDownload = async (url: string, filename: string) => {
     downloadingFiles.value.delete(url)
   }
 }
+
+// Add download pack handler
+const handleDownloadPack = async () => {
+    if (isDownloadingPack.value) return;
+    
+    try {
+        isDownloadingPack.value = true;
+        const blob = await api.packs.downloadPack(packId);
+        const downloadUrl = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = downloadUrl;
+        a.download = `${packStore.currentPack?.title || 'pack'}.zip`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(downloadUrl);
+    } catch (err: any) {
+        console.error('Download error:', err);
+        error.value = err.response?.data?.error || 'Failed to download pack';
+    } finally {
+        isDownloadingPack.value = false;
+    }
+};
 </script>
 
 <template>
@@ -268,7 +292,7 @@ const handleDownload = async (url: string, filename: string) => {
 
       <!-- Pack Details -->
       <div v-if="packStore.currentPack?.ID" class="bg-white shadow rounded-lg p-6 mb-8">
-        <h1 class="text-3xl font-bold mb-4">{{ packStore.currentPack.title }}</h1>
+        <h1 class="text-2xl font-bold mb-4">{{ packStore.currentPack.title }}</h1>
         <p class="text-gray-600 mb-6">{{ packStore.currentPack.description }}</p>
 
         <!-- Time Windows -->
@@ -287,33 +311,18 @@ const handleDownload = async (url: string, filename: string) => {
           </div>
         </div>
 
-        <!-- Sample List -->
-        <div class="mb-8">
-          <h2 class="text-2xl font-bold mb-4">Samples</h2>
-          <div class="space-y-4">
-            <div v-if="!packStore.currentPack.samples?.length" class="text-gray-500 text-center py-4">
-              No samples uploaded yet.
-            </div>
-            <div v-for="sample in packStore.currentPack.samples" :key="sample.ID"
-              class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-              <div>
-                <p class="font-medium">{{ sample.filename }}</p>
-                <p class="text-sm text-gray-500">
-                  Uploaded by {{ sample.user.email }}
-                </p>
-              </div>
-              <div class="flex items-center space-x-4">
-                <button @click="isPlaying && currentSample?.ID === sample.ID ? stopSample() : playSample(sample)"
-                  class="text-indigo-600 hover:text-indigo-800">
-                  {{ isPlaying && currentSample?.ID === sample.ID ? 'Stop' : 'Play' }}
-                </button>
-                <a href="#" @click.prevent="handleDownload(sample.fileUrl, sample.filename)"
-                  class="text-indigo-600 hover:text-indigo-800"
-                  :class="{ 'opacity-50 cursor-wait': downloadingFiles.has(sample.fileUrl) }">
-                  {{ downloadingFiles.has(sample.fileUrl) ? 'Downloading...' : 'Download' }}
-                </a>
-              </div>
-            </div>
+        <!-- Download Section -->
+        <div class="bg-gray-50 p-6 rounded-lg mb-8">
+          <div class="text-center">
+            <h2 class="text-lg font-semibold mb-2">Download Sample Pack</h2>
+            <p class="text-gray-600 mb-4">Download all samples in this pack to create your submission</p>
+            <button
+              @click="handleDownloadPack"
+              :disabled="isDownloadingPack"
+              class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-lg font-medium disabled:opacity-50"
+            >
+              {{ isDownloadingPack ? 'Downloading...' : 'Download Pack' }}
+            </button>
           </div>
         </div>
 

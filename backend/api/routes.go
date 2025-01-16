@@ -66,8 +66,8 @@ func SetupRoutes(r *gin.Engine) {
 	{
 		samples.GET("/packs", listSamplePacks)
 		samples.GET("/packs/:id", getSamplePack)
+		samples.GET("/packs/:id/download", downloadPack)
 		samples.POST("/packs/:id/upload", middleware.ValidateFileUpload(), uploadSample)
-		samples.GET("/download/:id", downloadSample)
 	}
 
 	// Admin routes for managing packs
@@ -467,9 +467,9 @@ func getSamplePack(c *gin.Context) {
 		return
 	}
 
-	// Get pack with samples preloaded
+	// Get pack without samples
 	var pack models.SamplePack
-	err = db.DB.Preload("Samples").Preload("Samples.User").First(&pack, id).Error
+	err = db.DB.First(&pack, id).Error
 	if err == gorm.ErrRecordNotFound {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Sample pack not found"})
 		return
@@ -477,11 +477,6 @@ func getSamplePack(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch sample pack"})
 		return
-	}
-
-	// Generate file URLs for samples
-	for i := range pack.Samples {
-		pack.Samples[i].FileURL = fmt.Sprintf("/api/samples/download/%d", pack.Samples[i].ID)
 	}
 	
 	c.JSON(http.StatusOK, pack)
@@ -654,4 +649,44 @@ func getCurrentUser(c *gin.Context) {
 			"email": user.Email,
 		},
 	})
-} 
+}
+
+func downloadPack(c *gin.Context) {
+	packID, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid pack ID"})
+		return
+	}
+
+	// Get the pack
+	var pack models.SamplePack
+	if err := db.DB.Preload("Samples").First(&pack, packID).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Pack not found"})
+		} else {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch pack"})
+		}
+		return
+	}
+
+	// Create a temporary directory for the zip
+	tempDir, err := os.MkdirTemp("", "pack-download-*")
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create temp directory"})
+		return
+	}
+	defer os.RemoveAll(tempDir)
+
+	// Create zip file
+	zipPath := filepath.Join(tempDir, fmt.Sprintf("pack-%d.zip", packID))
+	if err := packService.CreatePackZip(pack, zipPath); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create zip file"})
+		return
+	}
+
+	// Set filename for download
+	filename := strings.ReplaceAll(pack.Title, " ", "_") + ".zip"
+	c.Header("Content-Disposition", fmt.Sprintf("attachment; filename=%s", filename))
+	c.Header("Content-Type", "application/zip")
+	c.File(zipPath)
+}
