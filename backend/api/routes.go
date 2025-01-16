@@ -23,6 +23,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"gorm.io/gorm"
 )
 
 var store *storage.Storage
@@ -78,9 +79,10 @@ func SetupRoutes(r *gin.Engine) {
 	submissions := api.Group("/submissions")
 	submissions.Use(authMiddleware())
 	{
-		submissions.POST("/", createSubmission)
-		submissions.GET("/", listSubmissions)
+		submissions.POST("", createSubmission)
+		submissions.GET("", listSubmissions)
 		submissions.GET("/:id", getSubmission)
+		submissions.GET("/:id/download", downloadSubmission)
 	}
 }
 
@@ -319,15 +321,49 @@ func downloadSample(c *gin.Context) {
 }
 
 func createSubmission(c *gin.Context) {
-	var submission models.Submission
-	if err := c.ShouldBindJSON(&submission); err != nil {
+	// Get form data
+	title := c.PostForm("title")
+	description := c.PostForm("description")
+	samplePackID, err := strconv.ParseUint(c.PostForm("samplePackId"), 10, 32)
+	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	userID := c.GetUint("userID")
-	err := submissionService.CreateSubmission(userID, &submission)
+	// Handle file upload
+	file, err := c.FormFile("file")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "No file provided"})
+		return
+	}
 
+	// Open the uploaded file
+	src, err := file.Open()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to read file"})
+		return
+	}
+	defer src.Close()
+
+	// Save the file
+	filePath, err := store.SaveSample(src, file.Filename)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save file"})
+		return
+	}
+
+	submission := models.Submission{
+		Title:       title,
+		Description: description,
+		FilePath:    filePath,
+		FileSize:    file.Size,
+		UserID:      c.GetUint("userID"),
+		SamplePackID: uint(samplePackID),
+		SubmittedAt: time.Now(),
+	}
+
+	userID := c.GetUint("userID")
+	err = submissionService.CreateSubmission(userID, &submission)
 	if err != nil {
 		switch err {
 		case models.ErrSubmissionClosed:
@@ -336,6 +372,14 @@ func createSubmission(c *gin.Context) {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create submission"})
 		}
 		return
+	}
+
+	// Generate file URL
+	submission.FileURL = fmt.Sprintf("/api/submissions/%d/download", submission.ID)
+
+	// Load relations
+	if err := db.DB.Preload("User").Preload("SamplePack").First(&submission, submission.ID).Error; err != nil {
+		log.Printf("Warning: Failed to load relations: %v", err)
 	}
 
 	c.JSON(http.StatusCreated, submission)
@@ -405,15 +449,21 @@ func getSamplePack(c *gin.Context) {
 		return
 	}
 
-	pack, err := packService.GetPack(uint(id))
-	if err != nil {
-		switch err {
-		case models.ErrPackNotFound:
-			c.JSON(http.StatusNotFound, gin.H{"error": "Sample pack not found"})
-		default:
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch sample pack"})
-		}
+	// Get pack with samples preloaded
+	var pack models.SamplePack
+	err = db.DB.Preload("Samples").Preload("Samples.User").First(&pack, id).Error
+	if err == gorm.ErrRecordNotFound {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Sample pack not found"})
 		return
+	}
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch sample pack"})
+		return
+	}
+
+	// Generate file URLs for samples
+	for i := range pack.Samples {
+		pack.Samples[i].FileURL = fmt.Sprintf("/api/samples/download/%d", pack.Samples[i].ID)
 	}
 	
 	c.JSON(http.StatusOK, pack)
@@ -489,38 +539,26 @@ func refreshToken(c *gin.Context) {
 	})
 }
 
-func voteSubmission(c *gin.Context) {
-	var vote struct {
-		Value int `json:"value" binding:"required,oneof=-1 1"`
-	}
-
-	if err := c.ShouldBindJSON(&vote); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
-	submissionID, err := strconv.ParseUint(c.Param("id"), 10, 32)
+func downloadSubmission(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid submission ID"})
 		return
 	}
 
-	userID := c.GetUint("userID")
-	err = submissionService.Vote(userID, uint(submissionID), vote.Value)
-
-	if err != nil {
-		switch err {
-		case models.ErrAlreadyVoted:
-			c.JSON(http.StatusConflict, gin.H{"error": "Already voted for this submission"})
-		case submission.ErrInvalidVoteValue:
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid vote value"})
-		default:
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to record vote"})
-		}
+	var submission models.Submission
+	if err := db.DB.First(&submission, id).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Submission not found"})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Vote recorded successfully"})
+	// Check if file exists
+	if _, err := os.Stat(submission.FilePath); os.IsNotExist(err) {
+		c.JSON(http.StatusNotFound, gin.H{"error": "File not found"})
+		return
+	}
+
+	c.FileAttachment(submission.FilePath, fmt.Sprintf("submission_%d.wav", submission.ID))
 }
 
 func createSamplePack(c *gin.Context) {

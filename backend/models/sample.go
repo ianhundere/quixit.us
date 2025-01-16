@@ -16,5 +16,5 @@ type Sample struct {
 	UserID       uint      `json:"userId"`
 	User         User      `json:"user" gorm:"foreignKey:UserID"`
 	SamplePackID uint      `json:"samplePackId"`
-	SamplePack   SamplePack `json:"samplePack,omitempty" gorm:"foreignKey:SamplePackID"` // omit if empty
+	SamplePack   SamplePack `json:"-" gorm:"foreignKey:SamplePackID"` // Hide in JSON to avoid recursion
 } 

@@ -20,13 +20,12 @@ type Submission struct {
 	Description string    `json:"description"`
 	FileURL     string    `json:"fileUrl"`
 	FilePath    string    `json:"-"` // Internal storage path
+	FileSize    int64     `json:"fileSize"`
 	UserID      uint      `json:"userId"`
-	User        User      `json:"user"`
+	User        User      `json:"user" gorm:"foreignKey:UserID"`
 	SamplePackID uint     `json:"samplePackId"`
-	SamplePack  SamplePack `json:"samplePack"`
+	SamplePack  SamplePack `json:"samplePack" gorm:"foreignKey:SamplePackID"`
 	SubmittedAt time.Time `json:"submittedAt"`
-	Votes       []Vote    `json:"votes"`
-	VoteCount   int       `json:"voteCount" gorm:"-"` // Computed field
 }
 
 type Vote struct {
