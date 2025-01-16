@@ -38,10 +38,20 @@ onMounted(async () => {
     console.log('Fetching pack:', packId)
     const { data } = await api.packs.get(packId)
     packStore.currentPack = data
+
+    // Generate file URLs for samples
+    if (data.samples) {
+      data.samples.forEach(sample => {
+        sample.fileUrl = `/api/samples/download/${sample.ID}`
+      })
+    }
     
     // Fetch submissions
     const submissionsResponse = await api.submissions.list(packId)
-    submissions.value = submissionsResponse.data
+    submissions.value = submissionsResponse.data.map(submission => ({
+      ...submission,
+      fileUrl: `/api/submissions/${submission.ID}/download`
+    }))
   } catch (e: any) {
     console.error('Failed to fetch pack details:', e)
     error.value = e.response?.data?.error || 'Failed to load pack details'
@@ -149,7 +159,7 @@ const handleSubmissionFile = (e: Event) => {
       </div>
 
       <!-- Pack Details -->
-      <div v-if="packStore.currentPack" class="bg-white shadow rounded-lg p-6 mb-8">
+      <div v-if="packStore.currentPack?.ID" class="bg-white shadow rounded-lg p-6 mb-8">
         <h1 class="text-3xl font-bold mb-4">{{ packStore.currentPack.title }}</h1>
         <p class="text-gray-600 mb-6">{{ packStore.currentPack.description }}</p>
 
@@ -175,7 +185,7 @@ const handleSubmissionFile = (e: Event) => {
           <div class="space-y-4">
             <div 
               v-for="sample in packStore.currentPack.samples" 
-              :key="sample.id"
+              :key="sample.ID"
               class="flex items-center justify-between p-4 bg-gray-50 rounded-lg"
             >
               <div>
@@ -186,10 +196,10 @@ const handleSubmissionFile = (e: Event) => {
               </div>
               <div class="flex items-center space-x-4">
                 <button
-                  @click="isPlaying && currentSample?.id === sample.id ? stopSample() : playSample(sample)"
+                  @click="isPlaying && currentSample?.ID === sample.ID ? stopSample() : playSample(sample)"
                   class="text-indigo-600 hover:text-indigo-800"
                 >
-                  {{ isPlaying && currentSample?.id === sample.id ? 'Stop' : 'Play' }}
+                  {{ isPlaying && currentSample?.ID === sample.ID ? 'Stop' : 'Play' }}
                 </button>
                 <a
                   :href="sample.fileUrl"
@@ -276,7 +286,7 @@ const handleSubmissionFile = (e: Event) => {
           <div class="space-y-4">
             <div 
               v-for="submission in submissions" 
-              :key="submission.id"
+              :key="submission.ID"
               class="p-4 bg-gray-50 rounded-lg"
             >
               <div class="flex justify-between items-start">

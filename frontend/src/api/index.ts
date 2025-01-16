@@ -79,7 +79,15 @@ export const packs = {
   list: () => api.get<{ currentPack: SamplePack, pastPacks: SamplePack[] }>('/samples/packs'),
   get: (id: number) => {
     console.log('Fetching pack:', id)
-    return api.get<SamplePack>(`/samples/packs/${id}`)
+    return api.get<SamplePack>(`/samples/packs/${id}`).then(response => {
+      // Add file URLs to samples
+      if (response.data.samples) {
+        response.data.samples.forEach(sample => {
+          sample.fileUrl = `/api/samples/download/${sample.ID}`
+        })
+      }
+      return response
+    })
   },
   uploadSample: (file: File) => {
     const formData = new FormData()
