@@ -24,9 +24,7 @@ export const useAuthStore = defineStore('auth', {
       this.loading = true
       this.error = null
       try {
-        console.log('Auth store: Attempting login')
         const { data } = await api.auth.login(email, password)
-        console.log('Auth store: Login response:', data)
         
         if (!data.access_token || !data.user) {
           throw new Error('Invalid response format')
@@ -38,7 +36,6 @@ export const useAuthStore = defineStore('auth', {
         localStorage.setItem('access_token', data.access_token)
         return data
       } catch (err: any) {
-        console.error('Auth store: Login error:', err)
         this.error = err.response?.data?.error || err.message || 'Login failed'
         throw err
       } finally {

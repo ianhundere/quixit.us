@@ -1,6 +1,7 @@
 package samplepack
 
 import (
+	stderrors "errors"
 	"log"
 	"time"
 
@@ -26,19 +27,14 @@ func NewService(cfg *config.Config) *Service {
 
 func (s *Service) GetCurrentPack() (*models.SamplePack, error) {
 	var pack models.SamplePack
-	log.Printf("Fetching current pack...")
-	
-	err := s.db.Where("is_active = ?", true).
-		Preload("Samples").
-		First(&pack).Error
-
-	if err == gorm.ErrRecordNotFound {
-		log.Printf("No active pack found")
-		return nil, nil
+	result := db.DB.Where("is_active = ?", true).First(&pack)
+	if result.Error != nil {
+		if stderrors.Is(result.Error, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
+		return nil, result.Error
 	}
-	
-	log.Printf("Found active pack: %+v", pack)
-	return &pack, err
+	return &pack, nil
 }
 
 func (s *Service) GetPack(id uint) (*models.SamplePack, error) {
@@ -52,15 +48,11 @@ func (s *Service) GetPack(id uint) (*models.SamplePack, error) {
 
 func (s *Service) ListPacks(limit int) ([]models.SamplePack, error) {
 	var packs []models.SamplePack
-	log.Printf("Listing packs with limit: %d", limit)
-	
-	err := s.db.Order("created_at DESC").
-		Limit(limit).
-		Preload("Samples").
-		Find(&packs).Error
-		
-	log.Printf("Found %d packs", len(packs))
-	return packs, err
+	result := db.DB.Order("created_at desc").Limit(limit).Find(&packs)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+	return packs, nil
 }
 
 func (s *Service) CreatePack() (*models.SamplePack, error) {

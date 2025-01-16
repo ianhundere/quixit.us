@@ -13,22 +13,17 @@ import (
 	"sample-exchange/backend/auth"
 	"sample-exchange/backend/config"
 	"sample-exchange/backend/db"
-	"sample-exchange/backend/email"
 	"sample-exchange/backend/middleware"
 	"sample-exchange/backend/models"
 	"sample-exchange/backend/services/samplepack"
 	"sample-exchange/backend/services/submission"
 	"sample-exchange/backend/storage"
 
-	"sample-exchange/backend/errors"
-
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
 var store *storage.Storage
-var emailService *email.EmailService
 var rateLimiter *middleware.RateLimiter
 var packService *samplepack.Service
 var submissionService *submission.Service
@@ -37,7 +32,6 @@ const maxFileSize = 50 * 1024 * 1024 // 50MB
 
 func Init(r *gin.Engine, s *storage.Storage, cfg *config.Config) {
 	store = s
-	emailService = email.NewEmailService(cfg)
 	rateLimiter = middleware.NewRateLimiter(time.Minute, 60) // 60 requests per minute
 	packService = samplepack.NewService(cfg)
 	submissionService = submission.NewService(cfg, packService)
@@ -52,7 +46,7 @@ func SetupRoutes(r *gin.Engine) {
 	api := r.Group("/api")
 	api.Use(rateLimiter.RateLimit())
 	
-	// Health check
+	// Health check endpoint for monitoring
 	api.GET("/health", func(c *gin.Context) {
 		c.JSON(200, gin.H{"status": "ok"})
 	})
@@ -63,7 +57,6 @@ func SetupRoutes(r *gin.Engine) {
 		auth.POST("/register", registerUser)
 		auth.POST("/login", loginUser)
 		auth.POST("/refresh", refreshToken)
-		auth.GET("/verify/:token", verifyEmail)
 	}
 
 	// Sample routes
@@ -125,66 +118,37 @@ func authMiddleware() gin.HandlerFunc {
 }
 
 func registerUser(c *gin.Context) {
-	var register struct {
+	var input struct {
 		Email    string `json:"email" binding:"required,email"`
-		Password string `json:"password" binding:"required,min=6"`
+		Password string `json:"password" binding:"required,min=8"`
 	}
 
-	if err := c.ShouldBindJSON(&register); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input"})
 		return
 	}
 
-	// Validate password complexity
-	if err := models.ValidatePassword(register.Password); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	// Create user
+	user := &models.User{
+		Email: input.Email,
+	}
+
+	if err := user.SetPassword(input.Password); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to process password"})
 		return
 	}
 
-	// Check if user already exists
-	var existingUser models.User
-	if err := db.DB.Where("email = ?", register.Email).First(&existingUser).Error; err == nil {
-		c.JSON(http.StatusConflict, gin.H{"error": "Email already registered"})
-		return
-	}
-
-	// Generate verification token
-	verifyToken := uuid.New().String()
-
-	user := models.User{
-		Email: register.Email,
-		VerifyToken: verifyToken,
-	}
-
-	if err := user.SetPassword(register.Password); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to hash password"})
-		return
-	}
-
-	if err := db.DB.Create(&user).Error; err != nil {
+	// Save to database
+	if err := db.DB.Create(user).Error; err != nil {
+		if strings.Contains(err.Error(), "duplicate key") {
+			c.JSON(http.StatusConflict, gin.H{"error": "Email already registered"})
+			return
+		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create user"})
 		return
 	}
 
-	// Send verification email
-	if err := emailService.SendVerificationEmail(user.Email, verifyToken); err != nil {
-		log.Printf("Warning: Failed to send verification email: %v", err)
-		// For development, auto-verify the user
-		user.Verified = true
-		user.VerifyToken = ""
-		if err := db.DB.Save(&user).Error; err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to verify user"})
-			return
-		}
-	}
-
-	c.JSON(http.StatusCreated, gin.H{
-		"message": "Registration successful. Please check your email to verify your account.",
-		"user": gin.H{
-			"id":    user.ID,
-			"email": user.Email,
-		},
-	})
+	c.JSON(http.StatusCreated, gin.H{"message": "Registration successful"})
 }
 
 func loginUser(c *gin.Context) {
@@ -233,101 +197,75 @@ func loginUser(c *gin.Context) {
 }
 
 func uploadSample(c *gin.Context) {
-	log.Printf("Upload request received for pack ID: %s", c.Param("id"))
-	
-	if !packService.IsUploadAllowed() {
-		log.Printf("Upload window is closed")
-		c.Error(errors.NewAuthorizationError("Upload window is closed"))
-		return
-	}
-
-	// Get pack ID from URL parameter
-	packID, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	// Get pack ID from URL
+	packID, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
-		log.Printf("Invalid pack ID: %v", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid pack ID"})
 		return
 	}
 
-	log.Printf("Processing upload for pack ID: %d", packID)
-
-	// Get the pack and verify it exists
+	// Get pack
 	pack, err := packService.GetPack(uint(packID))
 	if err != nil {
-		log.Printf("Failed to get pack: %v", err)
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Pack not found"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get pack"})
 		return
 	}
 
-	// Verify pack is active
 	if !pack.IsActive {
-		log.Printf("Attempted to upload to inactive pack: %d", packID)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Pack is not active"})
 		return
 	}
 
-	// Get the uploaded file
+	// Get file from form
 	file, err := c.FormFile("file")
 	if err != nil {
-		log.Printf("No file provided: %v", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "No file provided"})
 		return
 	}
 
-	// Validate file size
 	if file.Size > maxFileSize {
-		log.Printf("File too large: %d bytes", file.Size)
-		c.JSON(http.StatusBadRequest, gin.H{"error": "File size must be less than 50MB"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "File too large"})
 		return
 	}
 
-	log.Printf("Received file: %s, size: %d bytes", file.Filename, file.Size)
-
-	// Open the uploaded file
+	// Open and read file
 	src, err := file.Open()
 	if err != nil {
-		log.Printf("Failed to read file: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to read file"})
 		return
 	}
 	defer src.Close()
 
-	// Save the file using our storage package
+	// Save file to storage
 	filePath, err := store.SaveSample(src, file.Filename)
 	if err != nil {
-		log.Printf("Failed to save file: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save file"})
 		return
 	}
-	log.Printf("Saved file to path: %s", filePath)
 
 	// Create sample record
-	sample := models.Sample{
-		Filename:     file.Filename,
-		FileSize:     file.Size,
-		UploadedAt:   time.Now(),
-		FilePath:     filePath,
-		UserID:       c.GetUint("userID"),
+	sample := &models.Sample{
 		SamplePackID: uint(packID),
+		UserID:      c.GetUint("userID"),
+		Filename:    file.Filename,
+		FilePath:    filePath,
+		FileSize:    file.Size,
+		UploadedAt:  time.Now(),
 	}
 
-	// Save to database
-	if err := db.DB.Create(&sample).Error; err != nil {
-		log.Printf("Failed to save to database: %v", err)
+	if err := db.DB.Create(sample).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save to database"})
 		return
 	}
 
 	// Load relations
-	if err := db.DB.Preload("User").First(&sample, sample.ID).Error; err != nil {
-		log.Printf("Warning: Failed to load relations: %v", err)
+	if err := db.DB.Preload("User").First(sample, sample.ID).Error; err != nil {
+		c.JSON(http.StatusOK, sample)
+		return
 	}
 
-	// Generate file URL
 	sample.FileURL = fmt.Sprintf("/api/samples/download/%d", sample.ID)
-
-	log.Printf("Successfully uploaded sample: %+v", sample)
-	c.JSON(http.StatusCreated, sample)
+	c.JSON(http.StatusOK, sample)
 }
 
 func downloadSample(c *gin.Context) {
@@ -501,32 +439,23 @@ func getSubmission(c *gin.Context) {
 }
 
 func listSamplePacks(c *gin.Context) {
-	// Add debug logging
-	log.Printf("Listing sample packs, user: %v", c.GetUint("userID"))
-	
+	// Get current pack
 	currentPack, err := packService.GetCurrentPack()
 	if err != nil {
-		log.Printf("Error getting current pack: %v", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch current pack"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get current pack"})
 		return
 	}
-	
-	log.Printf("Current pack: %+v", currentPack)
-	
+
+	// Get past packs
 	pastPacks, err := packService.ListPacks(10)
 	if err != nil {
-		log.Printf("Error listing packs: %v", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch sample packs"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to list packs"})
 		return
 	}
-	
-	log.Printf("Past packs count: %d", len(pastPacks))
 
 	c.JSON(http.StatusOK, gin.H{
 		"currentPack": currentPack,
 		"pastPacks":   pastPacks,
-		"canUpload":   packService.IsUploadAllowed(),
-		"canSubmit":   packService.IsSubmissionAllowed(),
 	})
 }
 
@@ -555,26 +484,6 @@ func getSamplePack(c *gin.Context) {
 	}
 	
 	c.JSON(http.StatusOK, pack)
-}
-
-func verifyEmail(c *gin.Context) {
-	token := c.Param("token")
-	
-	var user models.User
-	if err := db.DB.Where("verify_token = ?", token).First(&user).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Invalid verification token"})
-		return
-	}
-
-	user.Verified = true
-	user.VerifyToken = ""
-	
-	if err := db.DB.Save(&user).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to verify email"})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{"message": "Email verified successfully"})
 }
 
 func refreshToken(c *gin.Context) {
