@@ -25,40 +25,27 @@ const handleSubmit = async () => {
   <div class="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
     <div class="max-w-md w-full space-y-8">
       <h2 class="text-3xl font-bold text-center">Sign in</h2>
-      
+
       <form @submit.prevent="handleSubmit" class="mt-8 space-y-6">
         <div v-if="error" class="text-red-500 text-center">{{ error }}</div>
-        
+
         <div>
           <label for="email" class="sr-only">Email</label>
-          <input
-            id="email"
-            v-model="email"
-            type="email"
-            required
+          <input id="email" v-model="email" type="email" required
             class="appearance-none rounded-md relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-            placeholder="Email address"
-          />
-        </div>
-        
-        <div>
-          <label for="password" class="sr-only">Password</label>
-          <input
-            id="password"
-            v-model="password"
-            type="password"
-            required
-            class="appearance-none rounded-md relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-            placeholder="Password"
-          />
+            placeholder="Email address" />
         </div>
 
         <div>
-          <button
-            type="submit"
-            :disabled="auth.loading"
-            class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
-          >
+          <label for="password" class="sr-only">Password</label>
+          <input id="password" v-model="password" type="password" required
+            class="appearance-none rounded-md relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
+            placeholder="Password" />
+        </div>
+
+        <div>
+          <button type="submit" :disabled="auth.loading"
+            class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50">
             {{ auth.loading ? 'Logging in...' : 'Log in' }}
           </button>
         </div>
@@ -68,4 +55,4 @@ const handleSubmit = async () => {
       </div>
     </div>
   </div>
-</template> 
+</template>

@@ -57,6 +57,7 @@ func SetupRoutes(r *gin.Engine) {
 		auth.POST("/register", registerUser)
 		auth.POST("/login", loginUser)
 		auth.POST("/refresh", refreshToken)
+		auth.GET("/me", authMiddleware(), getCurrentUser)
 	}
 
 	// Sample routes
@@ -636,4 +637,21 @@ func updatePackWindows(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, pack)
+}
+
+func getCurrentUser(c *gin.Context) {
+	userID := c.GetUint("userID")
+	
+	var user models.User
+	if err := db.DB.First(&user, userID).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch user"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"user": gin.H{
+			"id":    user.ID,
+			"email": user.Email,
+		},
+	})
 } 

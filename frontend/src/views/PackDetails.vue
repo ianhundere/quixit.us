@@ -5,8 +5,8 @@ import { usePackStore } from '@/stores/index'
 import * as api from '@/api'
 import type { Sample, Submission } from '@/types'
 import AudioPlayer from '@/components/AudioPlayer.vue'
-import { downloadFile } from '@/api'
 import FileInput from '@/components/FileInput.vue'
+import { downloadFile } from '@/utils/download'
 
 const route = useRoute()
 const packStore = usePackStore()
@@ -57,15 +57,15 @@ const formatDate = (date: string) => {
 
 const validateFile = (file: File) => {
   const extension = file.name.substring(file.name.lastIndexOf('.')).toLowerCase()
-  
+
   if (!allowedTypes.includes(extension)) {
     return `Invalid file type. Allowed types: ${allowedTypes.join(', ')}`
   }
-  
+
   if (file.size > 50 * 1024 * 1024) {
     return 'File size must be less than 50MB'
   }
-  
+
   return null
 }
 
@@ -83,14 +83,14 @@ onMounted(async () => {
 
     // Generate file URLs for samples with auth token
     if (data.samples) {
-      data.samples.forEach(sample => {
+      data.samples.forEach((sample: Sample) => {
         sample.fileUrl = `/api/samples/download/${sample.ID}?token=${authToken.value}`
       })
     }
-    
+
     // Fetch submissions and add auth token to URLs
     const submissionsResponse = await api.submissions.list(packId)
-    submissions.value = submissionsResponse.data.map(submission => ({
+    submissions.value = submissionsResponse.data.map((submission: Submission) => ({
       ...submission,
       fileUrl: `/api/submissions/${submission.ID}/download?token=${authToken.value}`
     }))
@@ -134,7 +134,7 @@ const handleUpload = async () => {
     await api.packs.uploadSample(packId, uploadFile.value)
     uploadFile.value = null
     uploadSuccess.value = true
-    
+
     // Refresh pack details to show new sample
     const { data } = await api.packs.get(packId)
     packStore.currentPack = data
@@ -175,15 +175,15 @@ const handleSubmit = async () => {
       samplePackId: packId,
       file: submissionFile.value
     })
-    
+
     // Reset form
     submissionTitle.value = ''
     submissionDescription.value = ''
     submissionFile.value = null
-    
+
     // Refresh submissions
     const { data } = await api.submissions.list(packId)
-    submissions.value = data.map(submission => ({
+    submissions.value = data.map((submission: Submission) => ({
       ...submission,
       fileUrl: `/api/submissions/${submission.ID}/download?token=${authToken.value}`
     }))
@@ -212,7 +212,7 @@ const handleFileSelected = (file: File | null) => {
     uploadFile.value = null
     return
   }
-  
+
   uploadFile.value = file
   uploadError.value = ''
 }
@@ -230,7 +230,7 @@ const handleSubmissionFileSelected = (file: File | null) => {
     submissionFile.value = null
     return
   }
-  
+
   submissionFile.value = file
   submissionError.value = ''
 }
@@ -238,7 +238,7 @@ const handleSubmissionFileSelected = (file: File | null) => {
 // Add download handler
 const handleDownload = async (url: string, filename: string) => {
   if (downloadingFiles.value.has(url)) return
-  
+
   try {
     downloadingFiles.value.add(url)
     const blob = await downloadFile(url)
@@ -294,11 +294,8 @@ const handleDownload = async (url: string, filename: string) => {
             <div v-if="!packStore.currentPack.samples?.length" class="text-gray-500 text-center py-4">
               No samples uploaded yet.
             </div>
-            <div 
-              v-for="sample in packStore.currentPack.samples" 
-              :key="sample.ID"
-              class="flex items-center justify-between p-4 bg-gray-50 rounded-lg"
-            >
+            <div v-for="sample in packStore.currentPack.samples" :key="sample.ID"
+              class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
               <div>
                 <p class="font-medium">{{ sample.filename }}</p>
                 <p class="text-sm text-gray-500">
@@ -306,18 +303,13 @@ const handleDownload = async (url: string, filename: string) => {
                 </p>
               </div>
               <div class="flex items-center space-x-4">
-                <button
-                  @click="isPlaying && currentSample?.ID === sample.ID ? stopSample() : playSample(sample)"
-                  class="text-indigo-600 hover:text-indigo-800"
-                >
+                <button @click="isPlaying && currentSample?.ID === sample.ID ? stopSample() : playSample(sample)"
+                  class="text-indigo-600 hover:text-indigo-800">
                   {{ isPlaying && currentSample?.ID === sample.ID ? 'Stop' : 'Play' }}
                 </button>
-                <a
-                  href="#"
-                  @click.prevent="handleDownload(sample.fileUrl, sample.filename)"
+                <a href="#" @click.prevent="handleDownload(sample.fileUrl, sample.filename)"
                   class="text-indigo-600 hover:text-indigo-800"
-                  :class="{ 'opacity-50 cursor-wait': downloadingFiles.has(sample.fileUrl) }"
-                >
+                  :class="{ 'opacity-50 cursor-wait': downloadingFiles.has(sample.fileUrl) }">
                   {{ downloadingFiles.has(sample.fileUrl) ? 'Downloading...' : 'Download' }}
                 </a>
               </div>
@@ -329,20 +321,11 @@ const handleDownload = async (url: string, filename: string) => {
         <div v-if="packStore.currentPack.isActive" class="mb-8">
           <h2 class="text-2xl font-bold mb-4">Upload Sample</h2>
           <form @submit.prevent="handleUpload" class="space-y-4">
-            <FileInput
-              :accept="acceptString"
-              label="Choose a sample file"
-              :error="uploadError"
-              :disabled="isUploading"
-              :selectedFile="uploadFile"
-              @file-selected="handleFileSelected"
-            />
+            <FileInput :accept="acceptString" label="Choose a sample file" :error="uploadError" :disabled="isUploading"
+              :selectedFile="uploadFile" @file-selected="handleFileSelected" />
             <div v-if="uploadSuccess" class="text-green-500">Upload successful!</div>
-            <button
-              type="submit"
-              :disabled="isUploading || !uploadFile"
-              class="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 disabled:opacity-50"
-            >
+            <button type="submit" :disabled="isUploading || !uploadFile"
+              class="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 disabled:opacity-50">
               {{ isUploading ? 'Uploading...' : 'Upload' }}
             </button>
           </form>
@@ -351,46 +334,30 @@ const handleDownload = async (url: string, filename: string) => {
         <!-- Submissions -->
         <div>
           <h2 class="text-2xl font-bold mb-4">Submissions</h2>
-          
+
           <!-- Submission Form -->
           <form v-if="packStore.currentPack.isActive" @submit.prevent="handleSubmit" class="mb-8 space-y-4">
             <div>
               <label class="block text-sm font-medium text-gray-700">Title</label>
-              <input
-                v-model="submissionTitle"
-                type="text"
-                required
-                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-              />
+              <input v-model="submissionTitle" type="text" required
+                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" />
             </div>
-            
+
             <div>
               <label class="block text-sm font-medium text-gray-700">Description</label>
-              <textarea
-                v-model="submissionDescription"
-                rows="3"
-                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-              />
+              <textarea v-model="submissionDescription" rows="3"
+                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" />
             </div>
-            
-            <FileInput
-              :accept="acceptString"
-              label="Choose a submission file"
-              :error="submissionError"
-              :disabled="isSubmitting"
-              :selectedFile="submissionFile"
-              @file-selected="handleSubmissionFileSelected"
-            />
-            
+
+            <FileInput :accept="acceptString" label="Choose a submission file" :error="submissionError"
+              :disabled="isSubmitting" :selectedFile="submissionFile" @file-selected="handleSubmissionFileSelected" />
+
             <div v-if="submissionSuccess" class="text-green-500">
               Submission successful!
             </div>
-            
-            <button
-              type="submit"
-              :disabled="isSubmitting || !submissionFile || !submissionTitle.trim()"
-              class="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 disabled:opacity-50"
-            >
+
+            <button type="submit" :disabled="isSubmitting || !submissionFile || !submissionTitle.trim()"
+              class="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 disabled:opacity-50">
               {{ isSubmitting ? 'Submitting...' : 'Submit' }}
             </button>
           </form>
@@ -400,23 +367,16 @@ const handleDownload = async (url: string, filename: string) => {
             <div v-if="!submissions.length" class="text-gray-500 text-center py-4">
               No submissions yet.
             </div>
-            <div 
-              v-for="submission in submissions" 
-              :key="submission.ID"
-              class="p-4 bg-gray-50 rounded-lg"
-            >
+            <div v-for="submission in submissions" :key="submission.ID" class="p-4 bg-gray-50 rounded-lg">
               <div class="flex justify-between items-start">
                 <div>
                   <h3 class="font-medium">{{ submission.title }}</h3>
                   <p class="text-sm text-gray-500">by {{ submission.user.email }}</p>
                   <p class="mt-2">{{ submission.description }}</p>
                 </div>
-                <a
-                  href="#"
-                  @click.prevent="handleDownload(submission.fileUrl, `submission_${submission.ID}.wav`)"
+                <a href="#" @click.prevent="handleDownload(submission.fileUrl, `submission_${submission.ID}.wav`)"
                   class="text-indigo-600 hover:text-indigo-800"
-                  :class="{ 'opacity-50 cursor-wait': downloadingFiles.has(submission.fileUrl) }"
-                >
+                  :class="{ 'opacity-50 cursor-wait': downloadingFiles.has(submission.fileUrl) }">
                   {{ downloadingFiles.has(submission.fileUrl) ? 'Downloading...' : 'Download' }}
                 </a>
               </div>
@@ -430,12 +390,7 @@ const handleDownload = async (url: string, filename: string) => {
     </div>
 
     <!-- Audio Player -->
-    <AudioPlayer 
-      :sample="currentSample"
-      :isPlaying="isPlaying"
-      @playback-ended="isPlaying = false"
-      @can-play="() => {}"
-      @error="(message) => error = message"
-    />
+    <AudioPlayer :sample="currentSample" :isPlaying="isPlaying" @playback-ended="isPlaying = false" @can-play="() => { }"
+      @error="(message) => error = message" />
   </div>
-</template> 
+</template>
