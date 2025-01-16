@@ -6,6 +6,7 @@ import * as api from '@/api'
 import type { Sample, Submission } from '@/types'
 import AudioPlayer from '@/components/AudioPlayer.vue'
 import { downloadFile } from '@/api'
+import FileInput from '@/components/FileInput.vue'
 
 const route = useRoute()
 const packStore = usePackStore()
@@ -30,11 +31,15 @@ const submissionDescription = ref('')
 const submissionFile = ref<File | null>(null)
 const submissionError = ref('')
 const isSubmitting = ref(false)
+const submissionSuccess = ref(false)
 
 const allowedTypes = ['.wav', '.mp3', '.aiff', '.flac']
+const acceptString = allowedTypes.join(',')
 
 // Add a computed property for the auth token
 const authToken = computed(() => localStorage.getItem('access_token'))
+
+const downloadingFiles = ref(new Set<string>())
 
 onMounted(async () => {
   try {
@@ -117,10 +122,22 @@ const handleSubmit = async () => {
     return
   }
 
+  if (!submissionTitle.value.trim()) {
+    submissionError.value = 'Title is required'
+    return
+  }
+
   isSubmitting.value = true
   submissionError.value = ''
 
   try {
+    console.log('Creating submission:', {
+      title: submissionTitle.value,
+      description: submissionDescription.value,
+      samplePackId: packId,
+      file: submissionFile.value
+    })
+
     await api.submissions.create({
       title: submissionTitle.value,
       description: submissionDescription.value,
@@ -135,49 +152,78 @@ const handleSubmit = async () => {
     
     // Refresh submissions
     const { data } = await api.submissions.list(packId)
-    submissions.value = data
-  } catch (err) {
-    submissionError.value = 'Submission failed'
+    submissions.value = data.map(submission => ({
+      ...submission,
+      fileUrl: `/api/submissions/${submission.ID}/download?token=${authToken.value}`
+    }))
+    submissionSuccess.value = true
+    setTimeout(() => {
+      submissionSuccess.value = false
+    }, 3000)
+  } catch (err: any) {
     console.error('Submission error:', err)
+    submissionError.value = err.response?.data?.error || 'Submission failed'
   } finally {
     isSubmitting.value = false
   }
 }
 
-// Add type for file input event
-const handleFileUpload = (e: Event) => {
-  const target = e.target as HTMLInputElement
-  if (target.files) {
-    const file = target.files[0]
-    const extension = file.name.substring(file.name.lastIndexOf('.')).toLowerCase()
-    
-    if (!allowedTypes.includes(extension)) {
-      uploadError.value = `Invalid file type. Allowed types: ${allowedTypes.join(', ')}`
-      target.value = '' // Clear the input
-      return
-    }
-    
-    if (file.size > 50 * 1024 * 1024) {
-      uploadError.value = 'File size must be less than 50MB'
-      target.value = ''
-      return
-    }
-    
-    uploadFile.value = file
+const handleFileSelected = (file: File | null) => {
+  if (!file) {
     uploadError.value = ''
+    uploadFile.value = null
+    return
   }
+
+  const extension = file.name.substring(file.name.lastIndexOf('.')).toLowerCase()
+  
+  if (!allowedTypes.includes(extension)) {
+    uploadError.value = `Invalid file type. Allowed types: ${allowedTypes.join(', ')}`
+    uploadFile.value = null
+    return
+  }
+  
+  if (file.size > 50 * 1024 * 1024) {
+    uploadError.value = 'File size must be less than 50MB'
+    uploadFile.value = null
+    return
+  }
+  
+  uploadFile.value = file
+  uploadError.value = ''
 }
 
-const handleSubmissionFile = (e: Event) => {
-  const target = e.target as HTMLInputElement
-  if (target.files) {
-    submissionFile.value = target.files[0]
+const handleSubmissionFileSelected = (file: File | null) => {
+  if (!file) {
+    submissionError.value = ''
+    submissionFile.value = null
+    return
   }
+
+  const extension = file.name.substring(file.name.lastIndexOf('.')).toLowerCase()
+  
+  if (!allowedTypes.includes(extension)) {
+    submissionError.value = `Invalid file type. Allowed types: ${allowedTypes.join(', ')}`
+    submissionFile.value = null
+    return
+  }
+  
+  if (file.size > 50 * 1024 * 1024) {
+    submissionError.value = 'File size must be less than 50MB'
+    submissionFile.value = null
+    return
+  }
+  
+  submissionFile.value = file
+  submissionError.value = ''
 }
 
 // Add download handler
 const handleDownload = async (url: string, filename: string) => {
+  if (downloadingFiles.value.has(url)) return
+  
   try {
+    downloadingFiles.value.add(url)
     const blob = await downloadFile(url)
     const downloadUrl = window.URL.createObjectURL(blob)
     const a = document.createElement('a')
@@ -189,6 +235,8 @@ const handleDownload = async (url: string, filename: string) => {
     document.body.removeChild(a)
   } catch (err) {
     console.error('Download failed:', err)
+  } finally {
+    downloadingFiles.value.delete(url)
   }
 }
 </script>
@@ -248,8 +296,9 @@ const handleDownload = async (url: string, filename: string) => {
                   href="#"
                   @click.prevent="handleDownload(sample.fileUrl, sample.filename)"
                   class="text-indigo-600 hover:text-indigo-800"
+                  :class="{ 'opacity-50 cursor-wait': downloadingFiles.has(sample.fileUrl) }"
                 >
-                  Download
+                  {{ downloadingFiles.has(sample.fileUrl) ? 'Downloading...' : 'Download' }}
                 </a>
               </div>
             </div>
@@ -260,15 +309,14 @@ const handleDownload = async (url: string, filename: string) => {
         <div v-if="packStore.currentPack.isActive" class="mb-8">
           <h2 class="text-2xl font-bold mb-4">Upload Sample</h2>
           <form @submit.prevent="handleUpload" class="space-y-4">
-            <div>
-              <input
-                type="file"
-                accept=".wav,.mp3,.aiff,.flac"
-                @change="handleFileUpload"
-                class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
-              />
-            </div>
-            <div v-if="uploadError" class="text-red-500">{{ uploadError }}</div>
+            <FileInput
+              :accept="acceptString"
+              label="Choose a sample file"
+              :error="uploadError"
+              :disabled="isUploading"
+              :selectedFile="uploadFile"
+              @file-selected="handleFileSelected"
+            />
             <div v-if="uploadSuccess" class="text-green-500">Upload successful!</div>
             <button
               type="submit"
@@ -305,21 +353,22 @@ const handleDownload = async (url: string, filename: string) => {
               />
             </div>
             
-            <div>
-              <label class="block text-sm font-medium text-gray-700">File</label>
-              <input
-                type="file"
-                accept=".wav,.mp3,.aiff,.flac"
-                @change="handleSubmissionFile"
-                class="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
-              />
-            </div>
+            <FileInput
+              :accept="acceptString"
+              label="Choose a submission file"
+              :error="submissionError"
+              :disabled="isSubmitting"
+              :selectedFile="submissionFile"
+              @file-selected="handleSubmissionFileSelected"
+            />
             
-            <div v-if="submissionError" class="text-red-500">{{ submissionError }}</div>
+            <div v-if="submissionSuccess" class="text-green-500">
+              Submission successful!
+            </div>
             
             <button
               type="submit"
-              :disabled="isSubmitting || !submissionFile"
+              :disabled="isSubmitting || !submissionFile || !submissionTitle.trim()"
               class="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 disabled:opacity-50"
             >
               {{ isSubmitting ? 'Submitting...' : 'Submit' }}
@@ -343,8 +392,9 @@ const handleDownload = async (url: string, filename: string) => {
                   href="#"
                   @click.prevent="handleDownload(submission.fileUrl, `submission_${submission.ID}.wav`)"
                   class="text-indigo-600 hover:text-indigo-800"
+                  :class="{ 'opacity-50 cursor-wait': downloadingFiles.has(submission.fileUrl) }"
                 >
-                  Download
+                  {{ downloadingFiles.has(submission.fileUrl) ? 'Downloading...' : 'Download' }}
                 </a>
               </div>
             </div>

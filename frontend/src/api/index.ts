@@ -109,7 +109,12 @@ export const submissions = {
     formData.append('description', data.description)
     formData.append('samplePackId', String(data.samplePackId))
     formData.append('file', data.file)
-    return api.post<Submission>('/submissions', formData)
+
+    return api.post<Submission>('/submissions', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    })
   },
   list: (packId: number) => 
     api.get<Submission[]>(`/submissions?pack_id=${packId}`)
