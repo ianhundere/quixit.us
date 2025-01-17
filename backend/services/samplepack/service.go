@@ -20,13 +20,13 @@ import (
 
 type Service struct {
 	cfg *config.Config
-	db     *gorm.DB
+	db  *gorm.DB
 }
 
 func NewService(cfg *config.Config) *Service {
 	return &Service{
 		cfg: cfg,
-		db:     db.DB,
+		db:  db.DB,
 	}
 }
 
@@ -66,24 +66,24 @@ func (s *Service) CreatePack() (*models.SamplePack, error) {
 
 	// Calculate time windows
 	now := time.Now()
-	
+
 	// Find next Friday 00:00
 	uploadStart := nextWeekday(now, time.Friday)
 	uploadStart = time.Date(uploadStart.Year(), uploadStart.Month(), uploadStart.Day(), 0, 0, 0, 0, uploadStart.Location())
-	
+
 	// Sunday 23:59:59
 	uploadEnd := uploadStart.Add(72 * time.Hour).Add(-1 * time.Second)
-	
+
 	// Next Monday 00:00
 	startDate := nextWeekday(uploadEnd, time.Monday)
 	startDate = time.Date(startDate.Year(), startDate.Month(), startDate.Day(), 0, 0, 0, 0, startDate.Location())
-	
+
 	// Friday 00:00
 	endDate := startDate.Add(96 * time.Hour)
 
 	pack := &models.SamplePack{
-		Title:       "",  // Will be set by caller
-		Description: "",  // Will be set by caller
+		Title:       "", // Will be set by caller
+		Description: "", // Will be set by caller
 		UploadStart: uploadStart,
 		UploadEnd:   uploadEnd,
 		StartDate:   startDate,
@@ -113,7 +113,7 @@ func (s *Service) IsUploadAllowed() bool {
 	if err != nil {
 		return false
 	}
-	log.Printf("Upload window: %s to %s (now: %s)", 
+	log.Printf("Upload window: %s to %s (now: %s)",
 		pack.UploadStart.Format(time.RFC3339),
 		pack.UploadEnd.Format(time.RFC3339),
 		now.Format(time.RFC3339))
@@ -130,7 +130,7 @@ func (s *Service) IsSubmissionAllowed() bool {
 	if err != nil {
 		return false
 	}
-	log.Printf("Submission window: %s to %s (now: %s)", 
+	log.Printf("Submission window: %s to %s (now: %s)",
 		pack.StartDate.Format(time.RFC3339),
 		pack.EndDate.Format(time.RFC3339),
 		now.Format(time.RFC3339))
@@ -153,7 +153,7 @@ func (s *Service) AddSample(packID uint, sample *models.Sample) error {
 // CreatePackZip creates a zip file containing all samples in a pack
 func (s *Service) CreatePackZip(pack models.SamplePack, zipPath string) error {
 	log.Printf("Creating zip file for pack %d with %d samples", pack.ID, len(pack.Samples))
-	
+
 	// Create the zip file
 	zipFile, err := os.Create(zipPath)
 	if err != nil {
@@ -169,7 +169,7 @@ func (s *Service) CreatePackZip(pack models.SamplePack, zipPath string) error {
 	// Add each sample to the zip
 	for _, sample := range pack.Samples {
 		log.Printf("Adding sample %d (%s) from %s", sample.ID, sample.Filename, sample.FilePath)
-		
+
 		// Open the sample file using the stored file path
 		sampleFile, err := os.Open(sample.FilePath)
 		if err != nil {
@@ -190,10 +190,10 @@ func (s *Service) CreatePackZip(pack models.SamplePack, zipPath string) error {
 			log.Printf("Failed to copy sample %d to zip: %v", sample.ID, err)
 			return fmt.Errorf("failed to copy sample %d to zip: %w", sample.ID, err)
 		}
-		
+
 		log.Printf("Successfully added sample %d to zip", sample.ID)
 	}
 
 	log.Printf("Successfully created zip file at %s", zipPath)
 	return nil
-} 
+}

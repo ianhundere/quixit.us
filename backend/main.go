@@ -29,17 +29,17 @@ func main() {
 	store := storage.NewStorage(cfg)
 
 	r := gin.Default()
-	
+
 	// Security middlewares - only need one CORS handler
 	r.Use(middleware.SecurityHeaders())
 	r.Use(middleware.SanitizeInputs())
-	
+
 	// Rate limiting
 	r.Use(middleware.RateLimitByIP(60))
 
 	// Setup routes
 	api.Init(r, store, cfg)
-	
+
 	if err := r.Run(":" + cfg.Port); err != nil {
 		log.Fatal("Failed to start server:", err)
 	}

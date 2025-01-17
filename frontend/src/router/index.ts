@@ -35,19 +35,19 @@ const router = createRouter({
 // Navigation guard
 router.beforeEach(async (to, from, next) => {
     const auth = useAuthStore();
-    
+
     // Check if the route requires authentication
     if (to.meta.requiresAuth && !auth.token) {
         next('/login');
         return;
     }
-    
+
     // Prevent authenticated users from accessing login/register pages
     if (to.meta.guest && auth.token) {
         next('/');
         return;
     }
-    
+
     next();
 });
 

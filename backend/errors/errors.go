@@ -8,12 +8,12 @@ import (
 
 // APIError represents a structured API error
 type APIError struct {
-	Code       int    `json:"-"`              // HTTP status code
-	Message    string `json:"message"`        // User-friendly error message
-	Detail     string `json:"detail"`         // Detailed error message
-	Type       string `json:"type"`           // Error type for client handling
-	Field      string `json:"field"`          // Field name for validation errors
-	Internal   error  `json:"-"`              // Internal error (not exposed)
+	Code     int    `json:"-"`       // HTTP status code
+	Message  string `json:"message"` // User-friendly error message
+	Detail   string `json:"detail"`  // Detailed error message
+	Type     string `json:"type"`    // Error type for client handling
+	Field    string `json:"field"`   // Field name for validation errors
+	Internal error  `json:"-"`       // Internal error (not exposed)
 }
 
 func (e *APIError) Error() string {
@@ -25,12 +25,12 @@ func (e *APIError) Error() string {
 
 // Common error types
 const (
-	TypeValidation    = "VALIDATION_ERROR"
+	TypeValidation     = "VALIDATION_ERROR"
 	TypeAuthentication = "AUTHENTICATION_ERROR"
-	TypeAuthorization = "AUTHORIZATION_ERROR"
-	TypeNotFound      = "NOT_FOUND"
-	TypeBadRequest    = "BAD_REQUEST"
-	TypeInternal      = "INTERNAL_ERROR"
+	TypeAuthorization  = "AUTHORIZATION_ERROR"
+	TypeNotFound       = "NOT_FOUND"
+	TypeBadRequest     = "BAD_REQUEST"
+	TypeInternal       = "INTERNAL_ERROR"
 )
 
 // Error constructors
@@ -92,4 +92,4 @@ func IsValidationError(err error) bool {
 		return apiErr.Type == TypeValidation
 	}
 	return false
-} 
+}

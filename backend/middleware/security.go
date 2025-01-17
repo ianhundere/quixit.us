@@ -15,13 +15,13 @@ const (
 
 var (
 	allowedAudioTypes = map[string]bool{
-		"audio/wav":    true,
-		"audio/x-wav":  true,
-		"audio/mp3":    true,
-		"audio/mpeg":   true,
-		"audio/aiff":   true,
-		"audio/x-aiff": true,
-		"audio/flac":   true,
+		"audio/wav":                true,
+		"audio/x-wav":              true,
+		"audio/mp3":                true,
+		"audio/mpeg":               true,
+		"audio/aiff":               true,
+		"audio/x-aiff":             true,
+		"audio/flac":               true,
 		"application/octet-stream": true,
 	}
 
@@ -141,4 +141,4 @@ func CorsMiddleware() gin.HandlerFunc {
 		}
 		c.Next()
 	}
-} 
+}

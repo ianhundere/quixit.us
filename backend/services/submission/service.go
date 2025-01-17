@@ -14,19 +14,19 @@ import (
 )
 
 var (
-	ErrSubmissionClosed  = errors.New("submission window is closed")
+	ErrSubmissionClosed = errors.New("submission window is closed")
 )
 
 type Service struct {
-	config *config.Config
-	db     *gorm.DB
+	config      *config.Config
+	db          *gorm.DB
 	packService *samplepack.Service
 }
 
 func NewService(cfg *config.Config, packService *samplepack.Service) *Service {
 	return &Service{
-		config: cfg,
-		db:     db.DB,
+		config:      cfg,
+		db:          db.DB,
 		packService: packService,
 	}
 }
@@ -37,8 +37,8 @@ func (s *Service) CreateSubmission(userID uint, submission *models.Submission) e
 		if err != nil {
 			return fmt.Errorf("no active sample pack found")
 		}
-		return fmt.Errorf("submission window is closed. Opens %s, closes %s", 
-			pack.StartDate.Format("Jan 2 15:04 MST"), 
+		return fmt.Errorf("submission window is closed. Opens %s, closes %s",
+			pack.StartDate.Format("Jan 2 15:04 MST"),
 			pack.EndDate.Format("Jan 2 15:04 MST"))
 	}
 
@@ -93,4 +93,4 @@ func (s *Service) ListSubmissions(packID uint, limit, offset int) ([]models.Subm
 	}
 
 	return submissions, nil
-} 
+}

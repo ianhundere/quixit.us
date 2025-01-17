@@ -76,4 +76,4 @@ func formatValidationError(err validator.FieldError) string {
 	default:
 		return "Invalid value"
 	}
-} 
+}

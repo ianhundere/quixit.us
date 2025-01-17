@@ -52,4 +52,4 @@ func (s *Storage) GetSample(filepath string) (io.ReadCloser, error) {
 
 func (s *Storage) DeleteSample(filepath string) error {
 	return os.Remove(filepath)
-} 
+}

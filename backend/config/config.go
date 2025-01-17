@@ -11,14 +11,14 @@ import (
 
 type Config struct {
 	// Security settings
-	PasswordMinLength  int
-	PasswordMaxLength  int
-	MaxLoginAttempts   int
-	LockoutDuration    time.Duration
+	PasswordMinLength int
+	PasswordMaxLength int
+	MaxLoginAttempts  int
+	LockoutDuration   time.Duration
 
 	// Server settings
-	Port string
-	JWTSecret string
+	Port               string
+	JWTSecret          string
 	JWTAccessDuration  time.Duration
 	JWTRefreshDuration time.Duration
 
@@ -30,18 +30,18 @@ type Config struct {
 	SMTPFrom     string
 
 	// Upload window settings
-	UploadStartDay  time.Weekday // Friday
-	UploadDuration  time.Duration // 72 hours
-	
+	UploadStartDay time.Weekday  // Friday
+	UploadDuration time.Duration // 72 hours
+
 	// Submission window settings
-	SubmissionStartDay  time.Weekday // Monday
-	SubmissionDuration  time.Duration // 96 hours (4 days)
+	SubmissionStartDay time.Weekday  // Monday
+	SubmissionDuration time.Duration // 96 hours (4 days)
 
 	// Storage settings
 	StoragePath string
 
 	// Development settings
-	DevMode            bool
+	DevMode           bool
 	BypassTimeWindows bool
 }
 
@@ -69,8 +69,8 @@ func LoadConfig() *Config {
 
 	return &Config{
 		Port:               getEnv("PORT", "8080"),
-		JWTSecret:         getEnvRequired("JWT_SECRET"),
-		JWTAccessDuration: getDuration("JWT_ACCESS_DURATION", 15*time.Minute),
+		JWTSecret:          getEnvRequired("JWT_SECRET"),
+		JWTAccessDuration:  getDuration("JWT_ACCESS_DURATION", 15*time.Minute),
 		JWTRefreshDuration: getDuration("JWT_REFRESH_DURATION", 7*24*time.Hour),
 
 		SMTPHost:     getEnv("SMTP_HOST", "smtp.gmail.com"),
@@ -86,13 +86,13 @@ func LoadConfig() *Config {
 		StoragePath:        getEnv("STORAGE_PATH", "./storage"),
 
 		// Security settings
-		PasswordMinLength:  8,
-		PasswordMaxLength:  72, // bcrypt max
-		MaxLoginAttempts:   5,
-		LockoutDuration:    15 * time.Minute,
+		PasswordMinLength: 8,
+		PasswordMaxLength: 72, // bcrypt max
+		MaxLoginAttempts:  5,
+		LockoutDuration:   15 * time.Minute,
 
 		// Development settings
-		DevMode:            os.Getenv("DEV_MODE") == "true",
+		DevMode:           os.Getenv("DEV_MODE") == "true",
 		BypassTimeWindows: os.Getenv("DEV_BYPASS_TIME_WINDOWS") == "true",
 	}
 }
@@ -128,4 +128,4 @@ func getDuration(key string, fallback time.Duration) time.Duration {
 		}
 	}
 	return fallback
-} 
+}

@@ -11,12 +11,12 @@ import (
 
 type User struct {
 	gorm.Model
-	Email        string     `json:"email" gorm:"uniqueIndex;not null"`
-	PasswordHash string     `json:"-" gorm:"not null"`
-	Verified     bool       `json:"-" gorm:"default:false"`
-	VerifyToken  string     `json:"-" gorm:"size:255"`
-	RefreshToken string     `json:"-" gorm:"size:500"`
-	LoginAttempts int      `json:"-" gorm:"default:0"`
+	Email         string     `json:"email" gorm:"uniqueIndex;not null"`
+	PasswordHash  string     `json:"-" gorm:"not null"`
+	Verified      bool       `json:"-" gorm:"default:false"`
+	VerifyToken   string     `json:"-" gorm:"size:255"`
+	RefreshToken  string     `json:"-" gorm:"size:500"`
+	LoginAttempts int        `json:"-" gorm:"default:0"`
 	LockedUntil   *time.Time `json:"-"`
 }
 
@@ -87,4 +87,4 @@ func (u *User) SetPassword(password string) error {
 func (u *User) CheckPassword(password string) bool {
 	err := bcrypt.CompareHashAndPassword([]byte(u.PasswordHash), []byte(password))
 	return err == nil
-} 
+}

@@ -35,7 +35,7 @@ func Init(r *gin.Engine, s *storage.Storage, cfg *config.Config) {
 	rateLimiter = middleware.NewRateLimiter(time.Minute, 60) // 60 requests per minute
 	packService = samplepack.NewService(cfg)
 	submissionService = submission.NewService(cfg, packService)
-	
+
 	auth.Init(cfg)
 	r.Use(middleware.ErrorHandler())
 	SetupRoutes(r)
@@ -45,7 +45,7 @@ func Init(r *gin.Engine, s *storage.Storage, cfg *config.Config) {
 func SetupRoutes(r *gin.Engine) {
 	api := r.Group("/api")
 	api.Use(rateLimiter.RateLimit())
-	
+
 	// Health check endpoint for monitoring
 	api.GET("/health", func(c *gin.Context) {
 		c.JSON(200, gin.H{"status": "ok"})
@@ -113,7 +113,7 @@ func authMiddleware() gin.HandlerFunc {
 		// Add user info to context
 		c.Set("userID", claims.UserID)
 		c.Set("email", claims.Email)
-		
+
 		c.Next()
 	}
 }
@@ -188,7 +188,7 @@ func loginUser(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"access_token": accessToken,
+		"access_token":  accessToken,
 		"refresh_token": refreshToken,
 		"user": gin.H{
 			"id":    user.ID,
@@ -247,11 +247,11 @@ func uploadSample(c *gin.Context) {
 	// Create sample record
 	sample := &models.Sample{
 		SamplePackID: uint(packID),
-		UserID:      c.GetUint("userID"),
-		Filename:    file.Filename,
-		FilePath:    filePath,
-		FileSize:    file.Size,
-		UploadedAt:  time.Now(),
+		UserID:       c.GetUint("userID"),
+		Filename:     file.Filename,
+		FilePath:     filePath,
+		FileSize:     file.Size,
+		UploadedAt:   time.Now(),
 	}
 
 	if err := db.DB.Create(sample).Error; err != nil {
@@ -272,7 +272,7 @@ func uploadSample(c *gin.Context) {
 func downloadSample(c *gin.Context) {
 	// First try auth header
 	userID := c.GetUint("userID")
-	
+
 	// If no user ID from auth header, try token from query params
 	if userID == 0 {
 		token := c.Query("token")
@@ -366,13 +366,13 @@ func createSubmission(c *gin.Context) {
 	}
 
 	submission := models.Submission{
-		Title:       title,
-		Description: description,
-		FilePath:    filePath,
-		FileSize:    file.Size,
-		UserID:      c.GetUint("userID"),
+		Title:        title,
+		Description:  description,
+		FilePath:     filePath,
+		FileSize:     file.Size,
+		UserID:       c.GetUint("userID"),
 		SamplePackID: uint(samplePackID),
-		SubmittedAt: time.Now(),
+		SubmittedAt:  time.Now(),
 	}
 
 	userID := c.GetUint("userID")
@@ -478,7 +478,7 @@ func getSamplePack(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch sample pack"})
 		return
 	}
-	
+
 	c.JSON(http.StatusOK, pack)
 }
 
@@ -523,7 +523,7 @@ func refreshToken(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"access_token": accessToken,
+		"access_token":  accessToken,
 		"refresh_token": refreshToken,
 		"user": gin.H{
 			"id":    user.ID,
@@ -636,7 +636,7 @@ func updatePackWindows(c *gin.Context) {
 
 func getCurrentUser(c *gin.Context) {
 	userID := c.GetUint("userID")
-	
+
 	var user models.User
 	if err := db.DB.First(&user, userID).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch user"})

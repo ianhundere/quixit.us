@@ -26,12 +26,12 @@ func NewRateLimiter(window time.Duration, limit int) *RateLimiter {
 func (rl *RateLimiter) RateLimit() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		ip := c.ClientIP()
-		
+
 		rl.Lock()
 		defer rl.Unlock()
 
 		now := time.Now()
-		
+
 		// Remove old requests
 		var recent []time.Time
 		for _, t := range rl.requests[ip] {
@@ -44,7 +44,7 @@ func (rl *RateLimiter) RateLimit() gin.HandlerFunc {
 		// Check if limit is exceeded
 		if len(recent) >= rl.limit {
 			c.JSON(http.StatusTooManyRequests, gin.H{
-				"error": "Rate limit exceeded",
+				"error":       "Rate limit exceeded",
 				"retry_after": rl.window.Seconds(),
 			})
 			c.Abort()
@@ -53,7 +53,7 @@ func (rl *RateLimiter) RateLimit() gin.HandlerFunc {
 
 		// Add current request
 		rl.requests[ip] = append(rl.requests[ip], now)
-		
+
 		c.Next()
 	}
-} 
+}

@@ -37,4 +37,4 @@ func getEnv(key, fallback string) string {
 		return value
 	}
 	return fallback
-} 
+}

@@ -12,7 +12,7 @@ import (
 
 var (
 	cfg *config.Config
-	
+
 	ErrInvalidToken = errors.New("invalid token")
 	ErrExpiredToken = errors.New("token has expired")
 )
@@ -50,10 +50,10 @@ func GenerateTokenPair(user *models.User) (accessToken, refreshToken string, err
 	// Generate refresh token
 	claims.Type = "refresh"
 	claims.ExpiresAt = jwt.NewNumericDate(time.Now().Add(cfg.JWTRefreshDuration))
-	
+
 	token = jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	refreshToken, err = token.SignedString([]byte(cfg.JWTSecret))
-	
+
 	return accessToken, refreshToken, err
 }
 
@@ -79,4 +79,4 @@ func ValidateToken(tokenString string) (*Claims, error) {
 	}
 
 	return claims, nil
-} 
+}
