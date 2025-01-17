@@ -2,11 +2,18 @@ import { defineStore } from 'pinia';
 import type { SamplePack } from '@/types';
 import * as api from '@/api';
 
+interface PackState {
+    currentPack: SamplePack | null;
+    pastPacks: SamplePack[];
+    error: string | null;
+    loading: boolean;
+}
+
 export const usePackStore = defineStore('pack', {
-    state: () => ({
-        currentPack: null as SamplePack | null,
-        pastPacks: [] as SamplePack[],
-        error: null as string | null,
+    state: (): PackState => ({
+        currentPack: null,
+        pastPacks: [],
+        error: null,
         loading: false,
     }),
 

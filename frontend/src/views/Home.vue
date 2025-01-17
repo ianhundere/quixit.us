@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted } from 'vue'
+import { onMounted, ref } from 'vue'
 import { usePackStore } from '@/stores/index'
 import { useAuthStore } from '@/stores/auth'
 import LoadingSpinner from '@/components/LoadingSpinner.vue'
@@ -7,9 +7,14 @@ import { formatDate } from '@/utils/date'
 
 const packStore = usePackStore()
 const authStore = useAuthStore()
+const initialized = ref(false)
 
-onMounted(() => {
-  packStore.fetchPacks()
+onMounted(async () => {
+  try {
+    await packStore.fetchPacks()
+  } finally {
+    initialized.value = true
+  }
 })
 </script>
 
@@ -17,7 +22,7 @@ onMounted(() => {
   <div class="min-h-screen bg-gray-50 py-8">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <!-- Loading State -->
-      <LoadingSpinner v-if="packStore.loading" />
+      <LoadingSpinner v-if="!initialized || packStore.loading" />
 
       <!-- Error State -->
       <div v-else-if="packStore.error" class="bg-red-50 text-red-600 p-4 rounded-lg mb-4">
@@ -60,7 +65,7 @@ onMounted(() => {
         </div>
 
         <!-- Past Packs -->
-        <div v-if="packStore.pastPacks.length > 0" class="bg-white shadow rounded-lg p-6">
+        <div v-if="packStore.pastPacks?.length > 0" class="bg-white shadow rounded-lg p-6">
           <h2 class="text-2xl font-bold mb-4">Past Packs</h2>
           <div class="space-y-4">
             <div v-for="pack in packStore.pastPacks" :key="pack.ID" class="border-b pb-4 last:border-b-0">
