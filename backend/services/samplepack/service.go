@@ -1,8 +1,12 @@
 package samplepack
 
 import (
+	"archive/zip"
 	stderrors "errors"
+	"fmt"
+	"io"
 	"log"
+	"os"
 	"time"
 
 	"sample-exchange/backend/config"
@@ -10,29 +14,22 @@ import (
 	"sample-exchange/backend/errors"
 	"sample-exchange/backend/models"
 
-	"archive/zip"
-	"fmt"
-	"io"
-	"os"
-
 	"gorm.io/gorm"
 )
 
 type Service struct {
 	cfg *config.Config
-	db  *gorm.DB
 }
 
 func NewService(cfg *config.Config) *Service {
 	return &Service{
 		cfg: cfg,
-		db:  db.DB,
 	}
 }
 
 func (s *Service) GetCurrentPack() (*models.SamplePack, error) {
 	var pack models.SamplePack
-	result := db.DB.Where("is_active = ?", true).First(&pack)
+	result := db.GetDB().Where("is_active = ?", true).First(&pack)
 	if result.Error != nil {
 		if stderrors.Is(result.Error, gorm.ErrRecordNotFound) {
 			return nil, nil
@@ -44,7 +41,7 @@ func (s *Service) GetCurrentPack() (*models.SamplePack, error) {
 
 func (s *Service) GetPack(id uint) (*models.SamplePack, error) {
 	var pack models.SamplePack
-	err := s.db.Preload("Samples").First(&pack, id).Error
+	err := db.GetDB().Preload("Samples").First(&pack, id).Error
 	if err == gorm.ErrRecordNotFound {
 		return nil, errors.NewNotFoundError("Sample pack")
 	}
@@ -53,7 +50,7 @@ func (s *Service) GetPack(id uint) (*models.SamplePack, error) {
 
 func (s *Service) ListPacks(limit int) ([]models.SamplePack, error) {
 	var packs []models.SamplePack
-	result := db.DB.Order("created_at desc").Limit(limit).Find(&packs)
+	result := db.GetDB().Order("created_at desc").Limit(limit).Find(&packs)
 	if result.Error != nil {
 		return nil, result.Error
 	}
@@ -62,7 +59,7 @@ func (s *Service) ListPacks(limit int) ([]models.SamplePack, error) {
 
 func (s *Service) CreatePack() (*models.SamplePack, error) {
 	// Deactivate any currently active packs
-	s.db.Model(&models.SamplePack{}).Where("is_active = ?", true).Update("is_active", false)
+	db.GetDB().Model(&models.SamplePack{}).Where("is_active = ?", true).Update("is_active", false)
 
 	// Calculate time windows
 	now := time.Now()
@@ -91,7 +88,7 @@ func (s *Service) CreatePack() (*models.SamplePack, error) {
 		IsActive:    true,
 	}
 
-	return pack, s.db.Create(pack).Error
+	return pack, db.GetDB().Create(pack).Error
 }
 
 // Helper function to find next occurrence of a weekday
@@ -147,7 +144,7 @@ func (s *Service) AddSample(packID uint, sample *models.Sample) error {
 		return errors.NewAuthorizationError("Upload window is closed")
 	}
 
-	return s.db.Model(pack).Association("Samples").Append(sample)
+	return db.GetDB().Model(pack).Association("Samples").Append(sample)
 }
 
 // CreatePackZip creates a zip file containing all samples in a pack

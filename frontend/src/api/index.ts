@@ -1,50 +1,59 @@
-import client from './client'
-import type { SamplePack, Sample, Submission, User } from '@/types'
+import axios from 'axios'
+import type { SamplePack, User, Submission } from '@/types'
 
+// Create axios instance with default config
+export const api = axios.create({
+  baseURL: '/api',
+  headers: {
+    'Content-Type': 'application/json'
+  }
+})
+
+// Add auth token to requests
+api.interceptors.request.use(config => {
+  const token = localStorage.getItem('token')
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`
+  }
+  return config
+})
+
+// API namespaces
 export const auth = {
-    login: (email: string, password: string) => client.post('/api/auth/login', { email, password }),
-    register: (email: string, password: string) => client.post('/api/auth/register', { email, password }),
-    me: () => client.get('/api/auth/me')
+  register: (email: string, password: string) =>
+    api.post<User>('/auth/register', { email, password }, { baseURL: '/' }),
+  login: (email: string, password: string) =>
+    api.post<{ token: string; user: User }>('/auth/login', { email, password }, { baseURL: '/' }),
+  getCurrentUser: () =>
+    api.get<User>('/auth/me', { baseURL: '/' }),
+  oauthCallback: (code: string, provider: string) =>
+    api.get<{ token: string; user: User }>(`/auth/oauth/${provider}`, {
+      params: { code },
+      baseURL: '/'
+    })
 }
 
 export const packs = {
-    list: () => client.get<{ currentPack: SamplePack; pastPacks: SamplePack[] }>('/api/samples/packs'),
-    get: (id: number) => client.get<SamplePack>(`/api/samples/packs/${id}`),
-    uploadSample: (packId: number, file: File) => {
-        const formData = new FormData()
-        formData.append('file', file)
-        return client.post<Sample>(`/api/samples/packs/${packId}/upload`, formData, {
-            headers: {
-                'Content-Type': 'multipart/form-data'
-            }
-        })
-    },
-    downloadPack: async (packId: number): Promise<Blob> => {
-        const response = await client.get(`/api/samples/packs/${packId}/download`, {
-            responseType: 'blob'
-        });
-        return response.data;
-    }
+  list: () => api.get<{ currentPack: SamplePack; pastPacks: SamplePack[] }>('/samples/packs'),
+  get: (id: number) => api.get<SamplePack & { submissions: Submission[] }>(`/samples/packs/${id}`),
+  uploadSample: (packId: number, file: File) => {
+    const formData = new FormData()
+    formData.append('file', file)
+    return api.post(`/samples/packs/${packId}/upload`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    })
+  },
+  downloadPack: (packId: number) => api.get(`/samples/packs/${packId}/download`, { responseType: 'blob' })
 }
 
-export const submissions = {
-    list: (packId: number) => client.get<Submission[]>(`/api/submissions?pack_id=${packId}`),
-    create: (data: {
-        title: string,
-        description: string,
-        samplePackId: number,
-        file: File
-    }) => {
-        const formData = new FormData()
-        formData.append('title', data.title)
-        formData.append('description', data.description)
-        formData.append('samplePackId', String(data.samplePackId))
-        formData.append('file', data.file)
-
-        return client.post<Submission>('/api/submissions', formData, {
-            headers: {
-                'Content-Type': 'multipart/form-data'
-            }
-        })
-    }
+// Add type for the API instance
+declare module 'axios' {
+  interface AxiosInstance {
+    packs: typeof packs;
+    auth: typeof auth;
+  }
 }
+
+// Attach namespaces to api instance
+api.packs = packs;
+api.auth = auth;

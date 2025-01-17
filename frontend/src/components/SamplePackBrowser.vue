@@ -8,7 +8,7 @@
         <p>Available until: {{ formatDate(currentPack.endDate) }}</p>
         <div class="samples-list">
           <div v-for="sample in currentPack.samples" 
-               :key="sample.id" 
+               :key="sample.ID" 
                class="sample-item">
             <span>{{ sample.filename }}</span>
             <div class="sample-controls">
@@ -23,7 +23,7 @@
     <div class="past-packs" v-if="pastPacks.length">
       <h3>Past Packs</h3>
       <div v-for="pack in pastPacks" 
-           :key="pack.id" 
+           :key="pack.ID" 
            class="pack-item">
         <span>{{ formatDate(pack.startDate) }} - {{ formatDate(pack.endDate) }}</span>
         <button @click="viewPack(pack)">View Details</button>
@@ -32,25 +32,30 @@
   </div>
 </template>
 
-<script setup>
-import { ref, onMounted } from 'vue'
+<script setup lang="ts">
+import { ref, onMounted, computed } from 'vue'
+import { api } from '@/api'
+import type { SamplePack, Sample } from '@/types'
 
-const currentPack = ref(null)
-const pastPacks = ref([])
+const currentPack = ref<SamplePack | null>(null)
+const pastPacks = ref<SamplePack[]>([])
+const authToken = computed(() => localStorage.getItem('token'))
 
-const formatDate = (date) => {
+const formatDate = (date: string): string => {
+  if (!date) return ''
   return new Date(date).toLocaleDateString()
 }
 
-const playSample = (sample) => {
+const playSample = (sample: Sample) => {
   // TODO: Implement audio playback
+  console.log('Playing sample:', sample.filename)
 }
 
-const downloadSample = async (sample) => {
+const downloadSample = async (sample: Sample) => {
   try {
-    const response = await fetch(`/api/samples/download/${sample.id}`, {
+    const response = await fetch(`/api/samples/download/${sample.ID}`, {
       headers: {
-        'Authorization': `Bearer ${localStorage.getItem('token')}`
+        Authorization: `Bearer ${authToken.value}`
       }
     })
     if (response.ok) {
@@ -69,15 +74,16 @@ const downloadSample = async (sample) => {
   }
 }
 
-const viewPack = (pack) => {
+const viewPack = (pack: SamplePack) => {
   // TODO: Implement pack detail view
+  console.log('Viewing pack:', pack.title)
 }
 
 onMounted(async () => {
   try {
     const response = await fetch('/api/samples/packs', {
       headers: {
-        'Authorization': `Bearer ${localStorage.getItem('token')}`
+        Authorization: `Bearer ${localStorage.getItem('token')}`
       }
     })
     if (response.ok) {

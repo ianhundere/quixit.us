@@ -3,129 +3,100 @@ package config
 import (
 	"log"
 	"os"
-	"strconv"
 	"time"
 
 	"github.com/joho/godotenv"
 )
 
+type OAuthConfig struct {
+	ClientID     string
+	ClientSecret string
+	RedirectURL  string
+}
+
 type Config struct {
-	// Security settings
-	PasswordMinLength int
-	PasswordMaxLength int
-	MaxLoginAttempts  int
-	LockoutDuration   time.Duration
-
 	// Server settings
-	Port               string
-	JWTSecret          string
-	JWTAccessDuration  time.Duration
-	JWTRefreshDuration time.Duration
-
-	// Email settings
-	SMTPHost     string
-	SMTPPort     int
-	SMTPUsername string
-	SMTPPassword string
-	SMTPFrom     string
-
-	// Upload window settings
-	UploadStartDay time.Weekday  // Friday
-	UploadDuration time.Duration // 72 hours
-
-	// Submission window settings
-	SubmissionStartDay time.Weekday  // Monday
-	SubmissionDuration time.Duration // 96 hours (4 days)
-
-	// Storage settings
-	StoragePath string
+	Port string
+	Mode string
 
 	// Development settings
 	DevMode           bool
 	BypassTimeWindows bool
+	BypassOAuth       bool
+
+	// JWT settings
+	JWTSecret       string
+	AccessDuration  time.Duration
+	RefreshDuration time.Duration
+
+	// Storage settings
+	StoragePath string
+
+	// OAuth settings
+	OAuthRedirectURL string
+	GitHub           OAuthConfig
+	Google           OAuthConfig
+	Discord          OAuthConfig
 }
 
 func LoadConfig() *Config {
-	// Load .env file
 	if err := godotenv.Load(); err != nil {
-		log.Printf("Warning: Error loading .env file: %v", err)
+		log.Printf("Warning: .env file not found")
 	}
 
-	// Check required environment variables
-	requiredEnvVars := []string{
-		"JWT_SECRET",
-		"SMTP_USERNAME",
-		"SMTP_PASSWORD",
-		"SMTP_HOST",
-		"SMTP_FROM",
-		// ... other required variables
+	cfg := &Config{
+		Port:              getEnv("PORT", "8080"),
+		Mode:              getEnv("GIN_MODE", "debug"),
+		DevMode:           getEnvBool("DEV_MODE", true),
+		BypassTimeWindows: getEnvBool("DEV_BYPASS_TIME_WINDOWS", true),
+		BypassOAuth:       getEnvBool("DEV_BYPASS_OAUTH", false),
+		JWTSecret:         getEnv("JWT_SECRET", "your-super-secret-jwt-key-here"),
+		AccessDuration:    getEnvDuration("JWT_ACCESS_DURATION", 15*time.Minute),
+		RefreshDuration:   getEnvDuration("JWT_REFRESH_DURATION", 168*time.Hour),
+		StoragePath:       getEnv("STORAGE_PATH", "./storage"),
+		OAuthRedirectURL:  getEnv("OAUTH_REDIRECT_URL", "http://localhost:3000/auth/callback"),
+
+		// OAuth Providers
+		GitHub: OAuthConfig{
+			ClientID:     getEnv("OAUTH_GITHUB_CLIENT_ID", ""),
+			ClientSecret: getEnv("OAUTH_GITHUB_CLIENT_SECRET", ""),
+			RedirectURL:  getEnv("OAUTH_GITHUB_REDIRECT_URL", "http://localhost:3000/auth/github/callback"),
+		},
+		Google: OAuthConfig{
+			ClientID:     getEnv("OAUTH_GOOGLE_CLIENT_ID", ""),
+			ClientSecret: getEnv("OAUTH_GOOGLE_CLIENT_SECRET", ""),
+			RedirectURL:  getEnv("OAUTH_GOOGLE_REDIRECT_URL", "http://localhost:3000/auth/google/callback"),
+		},
+		Discord: OAuthConfig{
+			ClientID:     getEnv("OAUTH_DISCORD_CLIENT_ID", ""),
+			ClientSecret: getEnv("OAUTH_DISCORD_CLIENT_SECRET", ""),
+			RedirectURL:  getEnv("OAUTH_DISCORD_REDIRECT_URL", "http://localhost:3000/auth/discord/callback"),
+		},
 	}
 
-	for _, envVar := range requiredEnvVars {
-		if os.Getenv(envVar) == "" {
-			log.Fatalf("Required environment variable not set: %s", envVar)
-		}
-	}
-
-	return &Config{
-		Port:               getEnv("PORT", "8080"),
-		JWTSecret:          getEnvRequired("JWT_SECRET"),
-		JWTAccessDuration:  getDuration("JWT_ACCESS_DURATION", 15*time.Minute),
-		JWTRefreshDuration: getDuration("JWT_REFRESH_DURATION", 7*24*time.Hour),
-
-		SMTPHost:     getEnv("SMTP_HOST", "smtp.gmail.com"),
-		SMTPPort:     getEnvInt("SMTP_PORT", 587),
-		SMTPUsername: getEnvRequired("SMTP_USERNAME"),
-		SMTPPassword: getEnvRequired("SMTP_PASSWORD"),
-		SMTPFrom:     getEnvRequired("SMTP_FROM"),
-
-		UploadStartDay:     time.Friday,
-		UploadDuration:     72 * time.Hour,
-		SubmissionStartDay: time.Monday,
-		SubmissionDuration: 96 * time.Hour,
-		StoragePath:        getEnv("STORAGE_PATH", "./storage"),
-
-		// Security settings
-		PasswordMinLength: 8,
-		PasswordMaxLength: 72, // bcrypt max
-		MaxLoginAttempts:  5,
-		LockoutDuration:   15 * time.Minute,
-
-		// Development settings
-		DevMode:           os.Getenv("DEV_MODE") == "true",
-		BypassTimeWindows: os.Getenv("DEV_BYPASS_TIME_WINDOWS") == "true",
-	}
+	return cfg
 }
 
 func getEnv(key, fallback string) string {
-	if value, exists := os.LookupEnv(key); exists {
+	if value, ok := os.LookupEnv(key); ok {
 		return value
 	}
 	return fallback
 }
 
-func getEnvRequired(key string) string {
-	if value, exists := os.LookupEnv(key); exists {
-		return value
-	}
-	log.Fatalf("Required environment variable not set: %s", key)
-	return ""
-}
-
-func getEnvInt(key string, fallback int) int {
-	if value, exists := os.LookupEnv(key); exists {
-		if i, err := strconv.Atoi(value); err == nil {
-			return i
-		}
+func getEnvBool(key string, fallback bool) bool {
+	if value, ok := os.LookupEnv(key); ok {
+		return value == "true" || value == "1"
 	}
 	return fallback
 }
 
-func getDuration(key string, fallback time.Duration) time.Duration {
-	if value, exists := os.LookupEnv(key); exists {
-		if d, err := time.ParseDuration(value); err == nil {
-			return d
+func getEnvDuration(key string, fallback time.Duration) time.Duration {
+	if value, ok := os.LookupEnv(key); ok {
+		if duration, err := time.ParseDuration(value); err == nil {
+			return duration
 		}
+		log.Printf("Warning: invalid duration for %s, using fallback", key)
 	}
 	return fallback
 }

@@ -4,6 +4,7 @@ import { usePackStore } from '@/stores/index'
 import { useAuthStore } from '@/stores/auth'
 import LoadingSpinner from '@/components/LoadingSpinner.vue'
 import { formatDate } from '@/utils/date'
+import { getId } from '@/utils/id'
 
 const packStore = usePackStore()
 const authStore = useAuthStore()
@@ -32,25 +33,25 @@ onMounted(async () => {
       <!-- Content -->
       <div v-else>
         <!-- Current Pack -->
-        <div v-if="packStore.currentPack?.ID" class="bg-white shadow rounded-lg p-6 mb-8">
+        <div v-if="packStore.currentPack" class="bg-white shadow rounded-lg p-6 mb-8">
           <h2 class="text-2xl font-bold mb-4">Current Pack</h2>
           <div class="space-y-4">
-            <h3 class="text-xl">{{ packStore.currentPack.title }}</h3>
-            <p class="text-gray-600">{{ packStore.currentPack.description }}</p>
+            <h3 class="text-xl">{{ packStore.currentPack?.title }}</h3>
+            <p class="text-gray-600">{{ packStore.currentPack?.description }}</p>
 
             <!-- Time Windows -->
             <div class="grid grid-cols-2 gap-4 text-sm text-gray-600">
               <div>
                 <p>Upload Window:</p>
-                <p>{{ formatDate(packStore.currentPack.uploadStart) }}</p>
+                <p>{{ formatDate(packStore.currentPack?.uploadStart) }}</p>
                 <p>to</p>
-                <p>{{ formatDate(packStore.currentPack.uploadEnd) }}</p>
+                <p>{{ formatDate(packStore.currentPack?.uploadEnd) }}</p>
               </div>
               <div>
                 <p>Submission Window:</p>
-                <p>{{ formatDate(packStore.currentPack.startDate) }}</p>
+                <p>{{ formatDate(packStore.currentPack?.startDate) }}</p>
                 <p>to</p>
-                <p>{{ formatDate(packStore.currentPack.endDate) }}</p>
+                <p>{{ formatDate(packStore.currentPack?.endDate) }}</p>
               </div>
             </div>
 

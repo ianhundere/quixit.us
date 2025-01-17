@@ -14,15 +14,19 @@ var (
 )
 
 type Submission struct {
-	gorm.Model
-	Title        string     `json:"title" gorm:"not null"`
-	Description  string     `json:"description"`
-	FileURL      string     `json:"fileUrl"`
-	FilePath     string     `json:"-"` // Internal storage path
-	FileSize     int64      `json:"fileSize"`
-	UserID       uint       `json:"userId"`
-	User         User       `json:"user" gorm:"foreignKey:UserID"`
-	SamplePackID uint       `json:"samplePackId"`
-	SamplePack   SamplePack `json:"samplePack" gorm:"foreignKey:SamplePackID"`
-	SubmittedAt  time.Time  `json:"submittedAt"`
+	ID           uint           `json:"ID" gorm:"primarykey"`
+	CreatedAt    time.Time      `json:"createdAt"`
+	UpdatedAt    time.Time      `json:"updatedAt"`
+	DeletedAt    gorm.DeletedAt `json:"-" gorm:"index"`
+	Title        string         `json:"title"`
+	Description  string         `json:"description"`
+	Filename     string         `json:"filename"`
+	FileURL      string         `json:"fileUrl" gorm:"-"`
+	FilePath     string         `json:"-"`
+	FileSize     int64          `json:"fileSize"`
+	UserID       uint           `json:"userID"`
+	User         User           `json:"user" gorm:"foreignKey:UserID"`
+	SamplePackID uint           `json:"samplePackID"`
+	SamplePack   SamplePack     `json:"samplePack" gorm:"foreignKey:SamplePackID"`
+	SubmittedAt  time.Time      `json:"submittedAt"`
 }

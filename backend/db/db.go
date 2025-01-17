@@ -2,39 +2,31 @@ package db
 
 import (
 	"log"
-	"os"
+
 	"sample-exchange/backend/models"
 
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
 
-var DB *gorm.DB
+var db *gorm.DB
 
-func Init() {
+func SetupDB() *gorm.DB {
 	var err error
-	DB, err = gorm.Open(sqlite.Open("backend/sample_exchange.db"), &gorm.Config{})
+	db, err = gorm.Open(sqlite.Open("sample_exchange.db"), &gorm.Config{})
 	if err != nil {
 		log.Fatal("Failed to connect to database:", err)
 	}
 
-	// Auto migrate the schemas
-	log.Println("Running database migrations...")
-	err = DB.AutoMigrate(
-		&models.User{},
-		&models.SamplePack{},
-		&models.Sample{},
-		&models.Submission{},
-	)
+	// Auto migrate the schema
+	err = db.AutoMigrate(&models.User{})
 	if err != nil {
 		log.Fatal("Failed to migrate database:", err)
 	}
-	log.Println("Database migrations completed successfully")
+
+	return db
 }
 
-func getEnv(key, fallback string) string {
-	if value, exists := os.LookupEnv(key); exists {
-		return value
-	}
-	return fallback
+func GetDB() *gorm.DB {
+	return db
 }

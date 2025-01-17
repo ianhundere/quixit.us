@@ -1,55 +1,59 @@
 package storage
 
 import (
-	"fmt"
 	"io"
 	"os"
 	"path/filepath"
 
 	"sample-exchange/backend/config"
-
-	"github.com/google/uuid"
 )
 
-type Storage struct {
-	basePath string
+type Storage interface {
+	SaveSample(file io.Reader, filename string) (string, error)
+	SaveSubmission(file io.Reader, filename string) (string, error)
 }
 
-func NewStorage(cfg *config.Config) *Storage {
-	return &Storage{
-		basePath: cfg.StoragePath,
+type FileStorage struct {
+	samplePath     string
+	submissionPath string
+}
+
+func NewStorage(cfg *config.Config) Storage {
+	return &FileStorage{
+		samplePath:     filepath.Join(cfg.StoragePath, "samples"),
+		submissionPath: filepath.Join(cfg.StoragePath, "submissions"),
 	}
 }
 
-func (s *Storage) SaveSample(file io.Reader, filename string) (string, error) {
-	// Create storage directory if it doesn't exist
-	if err := os.MkdirAll(s.basePath, 0755); err != nil {
-		return "", fmt.Errorf("failed to create storage directory: %w", err)
+func (s *FileStorage) SaveSample(file io.Reader, filename string) (string, error) {
+	return s.saveFile(s.samplePath, file, filename)
+}
+
+func (s *FileStorage) SaveSubmission(file io.Reader, filename string) (string, error) {
+	return s.saveFile(s.submissionPath, file, filename)
+}
+
+func (s *FileStorage) saveFile(basePath string, file io.Reader, filename string) (string, error) {
+	// Create directory if it doesn't exist
+	if err := os.MkdirAll(basePath, 0755); err != nil {
+		return "", err
 	}
 
-	// Generate unique filename to avoid collisions
-	uniqueFilename := fmt.Sprintf("%s_%s", uuid.New().String(), filename)
-	filePath := filepath.Join(s.basePath, uniqueFilename)
+	// Create file path
+	filePath := filepath.Join(basePath, filename)
 
-	// Create the destination file
+	// Create file
 	dst, err := os.Create(filePath)
 	if err != nil {
-		return "", fmt.Errorf("failed to create file: %w", err)
+		return "", err
 	}
 	defer dst.Close()
 
-	// Copy the file data
+	// Copy file contents
 	if _, err := io.Copy(dst, file); err != nil {
-		return "", fmt.Errorf("failed to save file: %w", err)
+		os.Remove(filePath) // Clean up on error
+		return "", err
 	}
 
 	return filePath, nil
-}
-
-func (s *Storage) GetSample(filepath string) (io.ReadCloser, error) {
-	return os.Open(filepath)
-}
-
-func (s *Storage) DeleteSample(filepath string) error {
-	return os.Remove(filepath)
 }

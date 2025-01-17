@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"sample-exchange/backend/api"
+	"sample-exchange/backend/auth/oauth"
 	"sample-exchange/backend/config"
 	"sample-exchange/backend/db"
 	"sample-exchange/backend/middleware"
@@ -22,25 +23,45 @@ func main() {
 	// Load configuration
 	cfg := config.LoadConfig()
 
-	// Initialize database
-	db.Init()
+	// Set up database
+	database := db.SetupDB()
+
+	// Initialize OAuth providers
+	providers := oauth.NewProviders(cfg)
 
 	// Initialize storage
 	store := storage.NewStorage(cfg)
 
+	// Create router
 	r := gin.Default()
 
-	// Security middlewares - only need one CORS handler
+	// Security middlewares
 	r.Use(middleware.SecurityHeaders())
-	r.Use(middleware.SanitizeInputs())
+	r.Use(middleware.CORS())
 
-	// Rate limiting
-	r.Use(middleware.RateLimitByIP(60))
+	// Create handlers
+	oauthHandler := api.NewOAuthHandler(database, providers)
 
-	// Setup routes
+	// Public routes
+	auth := r.Group("/auth")
+	{
+		// OAuth routes
+		auth.GET("/oauth/:provider", oauthHandler.Login)
+		auth.POST("/oauth/:provider/callback", oauthHandler.Callback)
+	}
+
+	// Protected routes
+	protected := r.Group("/api")
+	protected.Use(middleware.Auth())
+	{
+		// Add protected routes here
+	}
+
+	// Setup other routes
 	api.Init(r, store, cfg)
 
-	if err := r.Run(":" + cfg.Port); err != nil {
+	// Start server
+	if err := r.Run(":8080"); err != nil {
 		log.Fatal("Failed to start server:", err)
 	}
 }

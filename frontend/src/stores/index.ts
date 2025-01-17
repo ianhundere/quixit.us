@@ -22,10 +22,14 @@ export const usePackStore = defineStore('pack', {
             this.loading = true;
             this.error = null;
             try {
-                const { data } = await api.packs.list();
-                this.currentPack = data.currentPack;
-                this.pastPacks = data.pastPacks;
+                const response = await api.packs.list();
+                console.log('API Response:', response);
+                console.log('Current Pack:', response.data.currentPack);
+                console.log('Past Packs:', response.data.pastPacks);
+                this.currentPack = response.data.currentPack;
+                this.pastPacks = response.data.pastPacks;
             } catch (e: any) {
+                console.error('Error fetching packs:', e);
                 this.error = e.response?.data?.error || 'Failed to load packs';
                 throw e;
             } finally {

@@ -1,58 +1,66 @@
-<script setup lang="ts">
-import { ref } from 'vue'
-import { useRouter } from 'vue-router'
-import { useAuthStore } from '@/stores/auth'
-
-const auth = useAuthStore()
-const router = useRouter()
-
-const email = ref('')
-const password = ref('')
-const error = ref('')
-
-const handleSubmit = async () => {
-  try {
-    error.value = ''
-    await auth.login(email.value, password.value)
-    router.push('/')
-  } catch (e: any) {
-    error.value = e.response?.data?.error || e.message || 'Login failed'
-  }
-}
-</script>
-
 <template>
   <div class="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
     <div class="max-w-md w-full space-y-8">
-      <h2 class="text-3xl font-bold text-center">Sign in</h2>
+      <div>
+        <h2 class="mt-6 text-center text-3xl font-extrabold text-gray-900">
+          Sign in to your account
+        </h2>
+      </div>
+      <div class="mt-8 space-y-6">
+        <div class="rounded-md shadow-sm space-y-4">
+          <!-- OAuth Providers -->
+          <button
+            @click="loginWithProvider('github')"
+            class="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-gray-800 hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
+          >
+            <span class="absolute left-0 inset-y-0 flex items-center pl-3">
+              <i class="fab fa-github"></i>
+            </span>
+            Sign in with GitHub
+          </button>
 
-      <form @submit.prevent="handleSubmit" class="mt-8 space-y-6">
-        <div v-if="error" class="text-red-500 text-center">{{ error }}</div>
+          <button
+            @click="loginWithProvider('google')"
+            class="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+          >
+            <span class="absolute left-0 inset-y-0 flex items-center pl-3">
+              <i class="fab fa-google"></i>
+            </span>
+            Sign in with Google
+          </button>
 
-        <div>
-          <label for="email" class="sr-only">Email</label>
-          <input id="email" v-model="email" type="email" required
-            class="appearance-none rounded-md relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-            placeholder="Email address" />
-        </div>
+          <button
+            @click="loginWithProvider('discord')"
+            class="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+          >
+            <span class="absolute left-0 inset-y-0 flex items-center pl-3">
+              <i class="fab fa-discord"></i>
+            </span>
+            Sign in with Discord
+          </button>
 
-        <div>
-          <label for="password" class="sr-only">Password</label>
-          <input id="password" v-model="password" type="password" required
-            class="appearance-none rounded-md relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-            placeholder="Password" />
-        </div>
-
-        <div>
-          <button type="submit" :disabled="auth.loading"
-            class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50">
-            {{ auth.loading ? 'Logging in...' : 'Log in' }}
+          <!-- Development Mode Login -->
+          <button
+            v-if="isDev"
+            @click="loginWithProvider('dev')"
+            class="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+          >
+            <span class="absolute left-0 inset-y-0 flex items-center pl-3">
+              <i class="fas fa-code"></i>
+            </span>
+            Development Login
           </button>
         </div>
-      </form>
-      <div v-if="auth.error" class="text-red-600 text-center">
-        {{ auth.error }}
       </div>
     </div>
   </div>
 </template>
+
+<script setup lang="ts">
+const isDev = import.meta.env.DEV
+const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8080'
+
+function loginWithProvider(provider: string) {
+  window.location.href = `${apiUrl}/auth/oauth/${provider}`
+}
+</script>

@@ -1,34 +1,47 @@
 export interface User {
-    ID: number;
+    ID?: string;
+    id?: string;
+    username: string;
     email: string;
-}
-
-export interface Sample {
-    ID: number;
-    filename: string;
-    fileSize: number;
-    fileUrl?: string;
-    uploadedAt: string;
-    userId: number;
-    user: User;
-}
-
-export interface SamplePack {
-    ID: number;
-    title: string;
-    description: string;
-    startDate: string;
-    endDate: string;
-    uploadStart: string;
-    uploadEnd: string;
-    isActive: boolean;
-    samples: Sample[];
+    createdAt: string;
+    updatedAt: string;
 }
 
 export interface Submission {
-    ID: number;
+    ID?: string;
+    id?: string;
+    title: string;
+    description: string;
+    fileUrl: string;
+    userId: string;
+    packId: string;
+    user?: User;
+    createdAt: string;
+    updatedAt: string;
+}
+
+export interface Sample {
+    ID?: string;
+    id?: string;
     title: string;
     description: string;
     fileUrl?: string;
-    user: User;
+    createdAt: string;
+    updatedAt: string;
+}
+
+export interface SamplePack {
+    ID?: string;
+    id?: string;
+    title: string;
+    description: string;
+    isActive: boolean;
+    samples: Sample[];
+    submissions: Submission[];
+    uploadStart: string;
+    uploadEnd: string;
+    startDate: string;
+    endDate: string;
+    createdAt: string;
+    updatedAt: string;
 }

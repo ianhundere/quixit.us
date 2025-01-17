@@ -1,692 +1,263 @@
 package api
 
 import (
+	"archive/zip"
 	"fmt"
-	"log"
+	"io"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strconv"
-	"strings"
 	"time"
 
-	"sample-exchange/backend/auth"
 	"sample-exchange/backend/config"
-	"sample-exchange/backend/db"
-	"sample-exchange/backend/middleware"
 	"sample-exchange/backend/models"
-	"sample-exchange/backend/services/samplepack"
-	"sample-exchange/backend/services/submission"
 	"sample-exchange/backend/storage"
 
 	"github.com/gin-gonic/gin"
-	"gorm.io/gorm"
 )
 
-var store *storage.Storage
-var rateLimiter *middleware.RateLimiter
-var packService *samplepack.Service
-var submissionService *submission.Service
-
-const maxFileSize = 50 * 1024 * 1024 // 50MB
-
-func Init(r *gin.Engine, s *storage.Storage, cfg *config.Config) {
-	store = s
-	rateLimiter = middleware.NewRateLimiter(time.Minute, 60) // 60 requests per minute
-	packService = samplepack.NewService(cfg)
-	submissionService = submission.NewService(cfg, packService)
-
-	auth.Init(cfg)
-	r.Use(middleware.ErrorHandler())
-	SetupRoutes(r)
-}
-
-// SetupRoutes configures all API routes
-func SetupRoutes(r *gin.Engine) {
+func Init(r *gin.Engine, store storage.Storage, cfg *config.Config) {
+	// Initialize routes
 	api := r.Group("/api")
-	api.Use(rateLimiter.RateLimit())
 
-	// Health check endpoint for monitoring
-	api.GET("/health", func(c *gin.Context) {
-		c.JSON(200, gin.H{"status": "ok"})
-	})
-
-	// Auth routes
-	auth := api.Group("/auth")
+	// Sample pack routes
+	packs := api.Group("/samples/packs")
 	{
-		auth.POST("/register", registerUser)
-		auth.POST("/login", loginUser)
-		auth.POST("/refresh", refreshToken)
-		auth.GET("/me", authMiddleware(), getCurrentUser)
-	}
-
-	// Sample routes
-	samples := api.Group("/samples")
-	samples.Use(authMiddleware()) // Protect these routes
-	{
-		samples.GET("/packs", listSamplePacks)
-		samples.GET("/packs/:id", getSamplePack)
-		samples.GET("/packs/:id/download", downloadPack)
-		samples.POST("/packs/:id/upload", middleware.ValidateFileUpload(), uploadSample)
-	}
-
-	// Admin routes for managing packs
-	admin := api.Group("/admin")
-	admin.Use(authMiddleware())
-	{
-		admin.POST("/packs", createSamplePack)
-		admin.PATCH("/packs/:id/windows", updatePackWindows)
+		packs.GET("", listPacks)
+		packs.GET("/:id", getPack)
+		packs.POST("/:id/upload", uploadSample)
+		packs.GET("/:id/download", downloadPack)
 	}
 
 	// Submission routes
 	submissions := api.Group("/submissions")
-	submissions.Use(authMiddleware())
 	{
-		submissions.POST("", middleware.ValidateFileUpload(), createSubmission)
 		submissions.GET("", listSubmissions)
-		submissions.GET("/:id", getSubmission)
-		submissions.GET("/:id/download", downloadSubmission)
+		submissions.POST("", createSubmission)
 	}
 }
 
-func authMiddleware() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		authHeader := c.GetHeader("Authorization")
-		if authHeader == "" {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Authorization header required"})
-			return
-		}
+func listPacks(c *gin.Context) {
+	// Get user info from context
+	_ = c.GetInt("user_id")
+	_ = c.GetString("email")
 
-		// Extract token from "Bearer <token>"
-		tokenParts := strings.Split(authHeader, " ")
-		if len(tokenParts) != 2 || tokenParts[0] != "Bearer" {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid authorization header format"})
-			return
-		}
+	// Parse dates
+	uploadStart, _ := time.Parse("2006-01-02", "2025-01-01")
+	uploadEnd, _ := time.Parse("2006-01-02", "2025-01-07")
+	startDate, _ := time.Parse("2006-01-02", "2025-01-08")
+	endDate, _ := time.Parse("2006-01-02", "2025-01-14")
 
-		claims, err := auth.ValidateToken(tokenParts[1])
-		if err != nil {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
-			return
-		}
+	pastUploadStart, _ := time.Parse("2006-01-02", "2024-12-01")
+	pastUploadEnd, _ := time.Parse("2006-01-02", "2024-12-07")
+	pastStartDate, _ := time.Parse("2006-01-02", "2024-12-08")
+	pastEndDate, _ := time.Parse("2006-01-02", "2024-12-14")
 
-		// Add user info to context
-		c.Set("userID", claims.UserID)
-		c.Set("email", claims.Email)
-
-		c.Next()
-	}
-}
-
-func registerUser(c *gin.Context) {
-	var input struct {
-		Email    string `json:"email" binding:"required,email"`
-		Password string `json:"password" binding:"required,min=8"`
+	// Return mock data for now
+	currentPack := models.SamplePack{
+		ID:          1,
+		Title:       "Current Pack",
+		Description: "This is the current sample pack",
+		UploadStart: uploadStart,
+		UploadEnd:   uploadEnd,
+		StartDate:   startDate,
+		EndDate:     endDate,
+		IsActive:    true,
 	}
 
-	if err := c.ShouldBindJSON(&input); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input"})
-		return
-	}
-
-	// Create user
-	user := &models.User{
-		Email: input.Email,
-	}
-
-	if err := user.SetPassword(input.Password); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to process password"})
-		return
-	}
-
-	// Save to database
-	if err := db.DB.Create(user).Error; err != nil {
-		if strings.Contains(err.Error(), "duplicate key") {
-			c.JSON(http.StatusConflict, gin.H{"error": "Email already registered"})
-			return
-		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create user"})
-		return
-	}
-
-	c.JSON(http.StatusCreated, gin.H{"message": "Registration successful"})
-}
-
-func loginUser(c *gin.Context) {
-	var login struct {
-		Email    string `json:"email" binding:"required,email"`
-		Password string `json:"password" binding:"required"`
-	}
-
-	if err := c.ShouldBindJSON(&login); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
-	var user models.User
-	if err := db.DB.Where("email = ?", login.Email).First(&user).Error; err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"})
-		return
-	}
-
-	if !user.CheckPassword(login.Password) {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"})
-		return
-	}
-
-	accessToken, refreshToken, err := auth.GenerateTokenPair(&user)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate token"})
-		return
-	}
-
-	// Update refresh token in database
-	user.RefreshToken = refreshToken
-	if err := db.DB.Save(&user).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save refresh token"})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"access_token":  accessToken,
-		"refresh_token": refreshToken,
-		"user": gin.H{
-			"id":    user.ID,
-			"email": user.Email,
-		},
-	})
-}
-
-func uploadSample(c *gin.Context) {
-	// Get pack ID from URL
-	packID, err := strconv.ParseUint(c.Param("id"), 10, 64)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid pack ID"})
-		return
-	}
-
-	// Get pack
-	pack, err := packService.GetPack(uint(packID))
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get pack"})
-		return
-	}
-
-	if !pack.IsActive {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Pack is not active"})
-		return
-	}
-
-	// Get file from form
-	file, err := c.FormFile("file")
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "No file provided"})
-		return
-	}
-
-	if file.Size > maxFileSize {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "File too large"})
-		return
-	}
-
-	// Open and read file
-	src, err := file.Open()
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to read file"})
-		return
-	}
-	defer src.Close()
-
-	// Save file to storage
-	filePath, err := store.SaveSample(src, file.Filename)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save file"})
-		return
-	}
-
-	// Create sample record
-	sample := &models.Sample{
-		SamplePackID: uint(packID),
-		UserID:       c.GetUint("userID"),
-		Filename:     file.Filename,
-		FilePath:     filePath,
-		FileSize:     file.Size,
-		UploadedAt:   time.Now(),
-	}
-
-	if err := db.DB.Create(sample).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save to database"})
-		return
-	}
-
-	// Load relations
-	if err := db.DB.Preload("User").First(sample, sample.ID).Error; err != nil {
-		c.JSON(http.StatusOK, sample)
-		return
-	}
-
-	sample.FileURL = fmt.Sprintf("/api/samples/download/%d", sample.ID)
-	c.JSON(http.StatusOK, sample)
-}
-
-func downloadSample(c *gin.Context) {
-	// First try auth header
-	userID := c.GetUint("userID")
-
-	// If no user ID from auth header, try token from query params
-	if userID == 0 {
-		token := c.Query("token")
-		if token == "" {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "No authentication provided"})
-			return
-		}
-
-		claims, err := auth.ValidateToken(token)
-		if err != nil {
-			log.Printf("Invalid token: %v", err)
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token"})
-			return
-		}
-		userID = claims.UserID
-		log.Printf("Authenticated with token for user: %d", userID)
-	}
-
-	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid sample ID"})
-		return
-	}
-
-	var sample models.Sample
-	if err := db.DB.First(&sample, id).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Sample not found"})
-		return
-	}
-
-	// Check if file exists
-	if _, err := os.Stat(sample.FilePath); os.IsNotExist(err) {
-		log.Printf("File not found at path: %s", sample.FilePath)
-		c.JSON(http.StatusNotFound, gin.H{"error": "File not found"})
-		return
-	}
-
-	// Set content type based on file extension
-	extension := strings.ToLower(filepath.Ext(sample.Filename))
-	switch extension {
-	case ".wav":
-		c.Header("Content-Type", "audio/wav")
-	case ".mp3":
-		c.Header("Content-Type", "audio/mpeg")
-	case ".aiff":
-		c.Header("Content-Type", "audio/aiff")
-	case ".flac":
-		c.Header("Content-Type", "audio/flac")
-	default:
-		c.Header("Content-Type", "application/octet-stream")
-	}
-
-	// Set headers for streaming
-	c.Header("Accept-Ranges", "bytes")
-	c.Header("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, sample.Filename))
-
-	// Serve the file
-	c.File(sample.FilePath)
-}
-
-func createSubmission(c *gin.Context) {
-	// Get form data
-	title := c.PostForm("title")
-	description := c.PostForm("description")
-	samplePackID, err := strconv.ParseUint(c.PostForm("samplePackId"), 10, 32)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
-	// Handle file upload
-	file, err := c.FormFile("file")
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "No file provided"})
-		return
-	}
-
-	// Open the uploaded file
-	src, err := file.Open()
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to read file"})
-		return
-	}
-	defer src.Close()
-
-	// Save the file
-	filePath, err := store.SaveSample(src, file.Filename)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save file"})
-		return
-	}
-
-	submission := models.Submission{
-		Title:        title,
-		Description:  description,
-		FilePath:     filePath,
-		FileSize:     file.Size,
-		UserID:       c.GetUint("userID"),
-		SamplePackID: uint(samplePackID),
-		SubmittedAt:  time.Now(),
-	}
-
-	userID := c.GetUint("userID")
-	err = submissionService.CreateSubmission(userID, &submission)
-	if err != nil {
-		switch err {
-		case models.ErrSubmissionClosed:
-			c.JSON(http.StatusForbidden, gin.H{"error": "Submission window is closed"})
-		default:
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create submission"})
-		}
-		return
-	}
-
-	// Generate file URL
-	submission.FileURL = fmt.Sprintf("/api/submissions/%d/download", submission.ID)
-
-	// Load relations
-	if err := db.DB.Preload("User").Preload("SamplePack").First(&submission, submission.ID).Error; err != nil {
-		log.Printf("Warning: Failed to load relations: %v", err)
-	}
-
-	c.JSON(http.StatusCreated, submission)
-}
-
-func listSubmissions(c *gin.Context) {
-	packID, err := strconv.ParseUint(c.Query("pack_id"), 10, 32)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid pack ID"})
-		return
-	}
-
-	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "20"))
-	offset := (page - 1) * limit
-
-	submissions, err := submissionService.ListSubmissions(uint(packID), limit, offset)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch submissions"})
-		return
-	}
-
-	c.JSON(http.StatusOK, submissions)
-}
-
-func getSubmission(c *gin.Context) {
-	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid submission ID"})
-		return
-	}
-
-	submission, err := submissionService.GetSubmission(uint(id))
-	if err != nil {
-		switch err {
-		case models.ErrSubmissionNotFound:
-			c.JSON(http.StatusNotFound, gin.H{"error": "Submission not found"})
-		default:
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch submission"})
-		}
-		return
-	}
-
-	c.JSON(http.StatusOK, submission)
-}
-
-func listSamplePacks(c *gin.Context) {
-	// Get current pack
-	currentPack, err := packService.GetCurrentPack()
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get current pack"})
-		return
-	}
-
-	// Get past packs
-	pastPacks, err := packService.ListPacks(10)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to list packs"})
-		return
+	pastPack := models.SamplePack{
+		ID:          2,
+		Title:       "Past Pack 1",
+		Description: "This is a past sample pack",
+		UploadStart: pastUploadStart,
+		UploadEnd:   pastUploadEnd,
+		StartDate:   pastStartDate,
+		EndDate:     pastEndDate,
+		IsActive:    false,
 	}
 
 	c.JSON(http.StatusOK, gin.H{
 		"currentPack": currentPack,
-		"pastPacks":   pastPacks,
+		"pastPacks":   []models.SamplePack{pastPack},
 	})
 }
 
-func getSamplePack(c *gin.Context) {
-	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid pack ID"})
-		return
-	}
+func getPack(c *gin.Context) {
+	// Get user info from context
+	_ = c.GetInt("user_id")
+	_ = c.GetString("email")
 
-	// Get pack without samples
-	var pack models.SamplePack
-	err = db.DB.First(&pack, id).Error
-	if err == gorm.ErrRecordNotFound {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Sample pack not found"})
-		return
-	}
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch sample pack"})
-		return
+	// Parse dates
+	uploadStart, _ := time.Parse("2006-01-02", "2025-01-01")
+	uploadEnd, _ := time.Parse("2006-01-02", "2025-01-07")
+	startDate, _ := time.Parse("2006-01-02", "2025-01-08")
+	endDate, _ := time.Parse("2006-01-02", "2025-01-14")
+
+	// Return mock data for now
+	pack := models.SamplePack{
+		ID:          1,
+		Title:       "Current Pack",
+		Description: "This is the current sample pack",
+		UploadStart: uploadStart,
+		UploadEnd:   uploadEnd,
+		StartDate:   startDate,
+		EndDate:     endDate,
+		IsActive:    true,
 	}
 
 	c.JSON(http.StatusOK, pack)
 }
 
-func refreshToken(c *gin.Context) {
-	var req struct {
-		RefreshToken string `json:"refresh_token" binding:"required"`
-	}
-
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
-	claims, err := auth.ValidateToken(req.RefreshToken)
+func uploadSample(c *gin.Context) {
+	// Get pack ID from URL
+	packID := c.Param("id")
+	id, err := strconv.ParseUint(packID, 10, 64)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid refresh token"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid pack ID"})
 		return
 	}
 
-	if claims.Type != "refresh" {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token type"})
-		return
-	}
-
-	var user models.User
-	if err := db.DB.First(&user, claims.UserID).Error; err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not found"})
-		return
-	}
-
-	accessToken, refreshToken, err := auth.GenerateTokenPair(&user)
+	// Get the file from the request
+	file, header, err := c.Request.FormFile("file")
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate token"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "no file uploaded"})
 		return
 	}
+	defer file.Close()
 
-	// Update refresh token in database
-	user.RefreshToken = refreshToken
-	if err := db.DB.Save(&user).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save refresh token"})
-		return
-	}
+	// Get user info from context
+	userID := c.GetInt("user_id")
+	email := c.GetString("email")
 
-	c.JSON(http.StatusOK, gin.H{
-		"access_token":  accessToken,
-		"refresh_token": refreshToken,
-		"user": gin.H{
-			"id":    user.ID,
-			"email": user.Email,
-		},
-	})
-}
-
-func downloadSubmission(c *gin.Context) {
-	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	// Create a temporary file to store the upload
+	tmpfile, err := os.CreateTemp("", "sample-*.wav")
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid submission ID"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create temporary file"})
+		return
+	}
+	defer os.Remove(tmpfile.Name())
+
+	// Copy the file data to the temporary file
+	if _, err := io.Copy(tmpfile, file); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to save file"})
 		return
 	}
 
-	var submission models.Submission
-	if err := db.DB.First(&submission, id).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Submission not found"})
-		return
+	// Return mock sample data
+	sample := models.Sample{
+		ID:           uint(id),
+		Filename:     header.Filename,
+		FileURL:      fmt.Sprintf("/api/samples/download/%d", id),
+		FileSize:     header.Size,
+		UserID:       uint(userID),
+		User:         models.User{ID: uint(userID), Email: email},
+		SamplePackID: uint(id),
 	}
 
-	// Check if file exists
-	if _, err := os.Stat(submission.FilePath); os.IsNotExist(err) {
-		c.JSON(http.StatusNotFound, gin.H{"error": "File not found"})
-		return
-	}
-
-	c.FileAttachment(submission.FilePath, fmt.Sprintf("submission_%d.wav", submission.ID))
-}
-
-func createSamplePack(c *gin.Context) {
-	var pack struct {
-		Title       string `json:"title" binding:"required"`
-		Description string `json:"description"`
-	}
-
-	if err := c.ShouldBindJSON(&pack); err != nil {
-		log.Printf("Invalid request body: %v", err)
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
-	log.Printf("Creating new pack with title: %s", pack.Title)
-	newPack, err := packService.CreatePack()
-	if err != nil {
-		log.Printf("Failed to create pack: %v", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create sample pack"})
-		return
-	}
-
-	newPack.Title = pack.Title
-	newPack.Description = pack.Description
-
-	if err := db.DB.Save(newPack).Error; err != nil {
-		log.Printf("Failed to save pack: %v", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save sample pack"})
-		return
-	}
-
-	log.Printf("Successfully created pack: %+v", newPack)
-	c.JSON(http.StatusCreated, newPack)
-}
-
-func updatePackWindows(c *gin.Context) {
-	var req struct {
-		UploadStart *time.Time `json:"uploadStart"`
-		UploadEnd   *time.Time `json:"uploadEnd"`
-		StartDate   *time.Time `json:"startDate"`
-		EndDate     *time.Time `json:"endDate"`
-	}
-
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
-	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid pack ID"})
-		return
-	}
-
-	var pack models.SamplePack
-	if err := db.DB.First(&pack, id).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Pack not found"})
-		return
-	}
-
-	// Update only provided fields
-	if req.UploadStart != nil {
-		pack.UploadStart = *req.UploadStart
-	}
-	if req.UploadEnd != nil {
-		pack.UploadEnd = *req.UploadEnd
-	}
-	if req.StartDate != nil {
-		pack.StartDate = *req.StartDate
-	}
-	if req.EndDate != nil {
-		pack.EndDate = *req.EndDate
-	}
-
-	if err := db.DB.Save(&pack).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update pack"})
-		return
-	}
-
-	c.JSON(http.StatusOK, pack)
-}
-
-func getCurrentUser(c *gin.Context) {
-	userID := c.GetUint("userID")
-
-	var user models.User
-	if err := db.DB.First(&user, userID).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch user"})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"user": gin.H{
-			"id":    user.ID,
-			"email": user.Email,
-		},
-	})
+	c.JSON(http.StatusOK, sample)
 }
 
 func downloadPack(c *gin.Context) {
-	packID, err := strconv.Atoi(c.Param("id"))
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid pack ID"})
+	// Get pack ID from URL
+	packID := c.Param("id")
+	if packID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Pack ID is required"})
 		return
 	}
 
-	// Get the pack
-	var pack models.SamplePack
-	if err := db.DB.Preload("Samples").First(&pack, packID).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Pack not found"})
-		} else {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch pack"})
+	// Create a temporary zip file
+	tmpFile, err := os.CreateTemp("", "pack-*.zip")
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create temporary file"})
+		return
+	}
+	defer os.Remove(tmpFile.Name())
+
+	// Create zip writer
+	zipWriter := zip.NewWriter(tmpFile)
+	defer zipWriter.Close()
+
+	// Get all .wav files from storage directory
+	files, err := os.ReadDir("storage")
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to read storage directory"})
+		return
+	}
+
+	// Add each .wav file to the zip
+	for _, file := range files {
+		if filepath.Ext(file.Name()) != ".wav" {
+			continue
 		}
+
+		// Open the file
+		f, err := os.Open(filepath.Join("storage", file.Name()))
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to read file"})
+			return
+		}
+		defer f.Close()
+
+		// Create zip entry
+		zipFile, err := zipWriter.Create(file.Name())
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create zip entry"})
+			return
+		}
+
+		// Copy file contents to zip
+		if _, err := io.Copy(zipFile, f); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to write to zip"})
+			return
+		}
+	}
+
+	// Close the zip writer
+	if err := zipWriter.Close(); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to finalize zip"})
 		return
 	}
 
-	// Create a temporary directory for the zip
-	tempDir, err := os.MkdirTemp("", "pack-download-*")
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create temp directory"})
-		return
-	}
-	defer os.RemoveAll(tempDir)
-
-	// Create zip file
-	zipPath := filepath.Join(tempDir, fmt.Sprintf("pack-%d.zip", packID))
-	if err := packService.CreatePackZip(pack, zipPath); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create zip file"})
+	// Seek to beginning of file
+	if _, err := tmpFile.Seek(0, 0); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to prepare file"})
 		return
 	}
 
-	// Set filename for download
-	filename := strings.ReplaceAll(pack.Title, " ", "_") + ".zip"
-	c.Header("Content-Disposition", fmt.Sprintf("attachment; filename=%s", filename))
+	// Set headers for download
+	c.Header("Content-Description", "File Transfer")
 	c.Header("Content-Type", "application/zip")
-	c.File(zipPath)
+	c.Header("Content-Disposition", fmt.Sprintf("attachment; filename=pack_%s.zip", packID))
+	c.Header("Content-Transfer-Encoding", "binary")
+	c.Header("Expires", "0")
+	c.Header("Cache-Control", "must-revalidate")
+	c.Header("Pragma", "public")
+
+	// Stream the file
+	c.File(tmpFile.Name())
+}
+
+func listSubmissions(c *gin.Context) {
+	// Get user info from context
+	userID := c.GetInt("user_id")
+	email := c.GetString("email")
+
+	// Return mock data for now
+	c.JSON(http.StatusOK, []models.Submission{
+		{
+			ID:          1,
+			Title:       "My Submission",
+			Description: "This is my submission",
+			FileURL:     "http://example.com/submission.zip",
+			User: models.User{
+				ID:    uint(userID),
+				Email: email,
+			},
+		},
+	})
+}
+
+func createSubmission(c *gin.Context) {
+	c.JSON(http.StatusNotImplemented, gin.H{"error": "not implemented"})
 }

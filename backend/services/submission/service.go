@@ -19,14 +19,12 @@ var (
 
 type Service struct {
 	config      *config.Config
-	db          *gorm.DB
 	packService *samplepack.Service
 }
 
 func NewService(cfg *config.Config, packService *samplepack.Service) *Service {
 	return &Service{
 		config:      cfg,
-		db:          db.DB,
 		packService: packService,
 	}
 }
@@ -51,12 +49,12 @@ func (s *Service) CreateSubmission(userID uint, submission *models.Submission) e
 	submission.SamplePackID = currentPack.ID
 	submission.SubmittedAt = time.Now()
 
-	return s.db.Create(submission).Error
+	return db.GetDB().Create(submission).Error
 }
 
 func (s *Service) GetSubmission(id uint) (*models.Submission, error) {
 	var submission models.Submission
-	err := s.db.Preload("User").
+	err := db.GetDB().Preload("User").
 		Preload("SamplePack").
 		First(&submission, id).Error
 
@@ -75,7 +73,7 @@ func (s *Service) GetSubmission(id uint) (*models.Submission, error) {
 
 func (s *Service) ListSubmissions(packID uint, limit, offset int) ([]models.Submission, error) {
 	var submissions []models.Submission
-	err := s.db.Where("sample_pack_id = ?", packID).
+	err := db.GetDB().Where("sample_pack_id = ?", packID).
 		Preload("User").
 		Preload("SamplePack").
 		Order("created_at DESC").
