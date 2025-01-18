@@ -27,7 +27,7 @@ export const auth = {
   getCurrentUser: () =>
     api.get<User>('/auth/me', { baseURL: '/' }),
   oauthCallback: (code: string, provider: string) =>
-    api.get<{ token: string; user: User }>(`/auth/oauth/${provider}`, {
+    api.get<{ token: string; user: User }>(`/auth/oauth/${provider}/callback`, {
       params: { code },
       baseURL: '/'
     })

@@ -102,7 +102,6 @@ func NewProviders(cfg *config.Config) map[string]Provider {
 		providers["dev"] = NewDevProvider(config.OAuthConfig{
 			RedirectURL: cfg.OAuthRedirectURL,
 		})
-		return providers // Only use dev provider when bypassing OAuth
 	}
 
 	// Add GitHub provider

@@ -15,6 +15,14 @@ const router = createRouter({
             meta: { guest: true }
         },
         {
+            path: '/auth/:provider/callback',
+            component: () => import('@/views/OAuthCallback.vue'),
+            props: route => ({
+                code: route.query.code,
+                provider: route.params.provider
+            })
+        },
+        {
             path: '/auth/callback',
             component: () => import('@/views/OAuthCallback.vue'),
             props: route => ({

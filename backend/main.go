@@ -47,7 +47,7 @@ func main() {
 	{
 		// OAuth routes
 		auth.GET("/oauth/:provider", oauthHandler.Login)
-		auth.POST("/oauth/:provider/callback", oauthHandler.Callback)
+		auth.GET("/oauth/:provider/callback", oauthHandler.Callback)
 	}
 
 	// Protected routes
