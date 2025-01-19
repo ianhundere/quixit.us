@@ -18,18 +18,18 @@ import (
 )
 
 type Handler struct {
-	packService      *samplepack.Service
+	packService       *samplepack.Service
 	submissionService *submission.Service
-	storage          storage.Storage
-	config           *config.Config
+	storage           storage.Storage
+	config            *config.Config
 }
 
 func NewHandler(packService *samplepack.Service, submissionService *submission.Service, storage storage.Storage, cfg *config.Config) *Handler {
 	return &Handler{
-		packService:      packService,
+		packService:       packService,
 		submissionService: submissionService,
-		storage:          storage,
-		config:           cfg,
+		storage:           storage,
+		config:            cfg,
 	}
 }
 
@@ -48,7 +48,7 @@ func Init(r *gin.Engine, store storage.Storage, cfg *config.Config) {
 			userID := uint(c.GetInt("user_id"))
 			email := c.GetString("email")
 			c.JSON(http.StatusOK, gin.H{
-				"ID": userID,
+				"ID":    userID,
 				"email": email,
 			})
 		})

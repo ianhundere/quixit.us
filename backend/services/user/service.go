@@ -89,4 +89,4 @@ func (s *Service) List(limit, offset int) ([]models.User, error) {
 // Delete removes a user by their ID
 func (s *Service) Delete(id uint) error {
 	return s.db.Delete(&models.User{}, id).Error
-} 
+}

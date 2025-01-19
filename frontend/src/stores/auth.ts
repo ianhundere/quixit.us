@@ -29,19 +29,19 @@ export const useAuthStore = defineStore('auth', () => {
         try {
             loading.value = true;
             error.value = null;
-            
+
             // Set auth header
             api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-            
+
             // Get current user
             const { data } = await api.auth.getCurrentUser();
             if (!data || !data.ID) {
                 throw new Error('Invalid user data received');
             }
-            
+
             user.value = data;
             console.log('User loaded:', user.value.ID);
-            
+
             return user.value;
         } catch (e: any) {
             console.error('Failed to initialize auth:', e);
@@ -65,7 +65,7 @@ export const useAuthStore = defineStore('auth', () => {
             // Get token from OAuth callback
             const { data } = await api.auth.oauthCallback(code, provider);
             console.log('OAuth callback response:', data);
-            
+
             if (!data || !data.token) {
                 throw new Error('Invalid OAuth response - no token received');
             }
@@ -94,7 +94,7 @@ export const useAuthStore = defineStore('auth', () => {
             // Get user data
             const { data } = await api.auth.getCurrentUser();
             console.log('Got user data:', data);
-            
+
             if (!data || !data.ID) {
                 throw new Error('Invalid user data received');
             }
@@ -128,7 +128,7 @@ export const useAuthStore = defineStore('auth', () => {
             if (!data || !data.ID) {
                 throw new Error('Invalid user data received');
             }
-            
+
             user.value = data;
             return user.value;
         } catch (e: any) {
