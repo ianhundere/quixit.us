@@ -23,7 +23,7 @@
       </div>
       
       <!-- Upload Component -->
-      <div v-if="isUploadAllowed || __DEV_BYPASS_TIME_WINDOWS__">
+      <div v-if="isUploadAllowed">
         <SampleUpload
           :packId="currentPack?.ID"
           :uploadStart="currentPack?.uploadStart"
