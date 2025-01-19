@@ -38,7 +38,7 @@
       </div>
       
       <!-- Submit Track -->
-      <div v-if="isSubmissionAllowed || __DEV_BYPASS_TIME_WINDOWS__" class="bg-white shadow rounded-lg p-6">
+      <div v-if="isSubmissionAllowed" class="bg-white shadow rounded-lg p-6">
         <h2 class="text-xl font-bold mb-4">Submit Your Track</h2>
         <div class="space-y-4">
           <div>

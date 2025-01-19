@@ -56,17 +56,21 @@ func main() {
 	// Initialize handlers
 	oauthHandler := api.NewOAuthHandler(db.GetDB(), providers, cfg.OAuthRedirectURL)
 
-	// OAuth routes
-	auth := r.Group("/auth")
+	// API routes
+	apiGroup := r.Group("/api")
 	{
-		oauth := auth.Group("/oauth")
+		// OAuth routes
+		auth := apiGroup.Group("/auth")
 		{
-			oauth.GET("/:provider", oauthHandler.Login)
-			oauth.GET("/:provider/callback", oauthHandler.Callback)
+			oauth := auth.Group("/oauth")
+			{
+				oauth.GET("/:provider", oauthHandler.Login)
+				oauth.GET("/:provider/callback", oauthHandler.Callback)
+			}
 		}
 	}
 
-	// Initialize API routes
+	// Initialize other API routes
 	api.Init(r, store, cfg)
 
 	// Start server

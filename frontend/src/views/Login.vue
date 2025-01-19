@@ -58,9 +58,9 @@
 
 <script setup lang="ts">
 const isDev = import.meta.env.DEV
-const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8080'
+const baseUrl = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:8080'
 
 function loginWithProvider(provider: string) {
-  window.location.href = `${apiUrl}/auth/oauth/${provider}`
+  window.location.href = `${baseUrl}/api/auth/oauth/${provider}`
 }
 </script>

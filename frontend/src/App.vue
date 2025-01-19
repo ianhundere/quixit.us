@@ -7,10 +7,7 @@ const router = useRouter()
 const auth = useAuthStore()
 
 const isAuthenticated = computed(() => !!auth.user)
-
-const login = () => {
-  window.location.href = '/api/auth/oauth/dev'
-}
+const isLoginPage = computed(() => router.currentRoute.value.path === '/login')
 
 const logout = async () => {
   auth.logout(router)
@@ -30,7 +27,7 @@ const logout = async () => {
             </router-link>
             
             <!-- Navigation Links -->
-            <div class="hidden sm:ml-6 sm:flex sm:space-x-8">
+            <div v-if="isAuthenticated" class="hidden sm:ml-6 sm:flex sm:space-x-8">
               <router-link 
                 to="/packs"
                 class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
@@ -67,15 +64,15 @@ const logout = async () => {
           
           <!-- Right side -->
           <div class="flex items-center">
-            <button
-              v-if="!isAuthenticated"
-              @click="login"
+            <router-link
+              v-if="!isAuthenticated && !isLoginPage"
+              to="/login"
               class="ml-3 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
             >
-              Login
-            </button>
+              Sign In
+            </router-link>
             <button
-              v-else
+              v-else-if="isAuthenticated"
               @click="logout"
               class="ml-3 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-gray-700 bg-gray-100 hover:bg-gray-200"
             >

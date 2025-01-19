@@ -18,11 +18,7 @@ const router = createRouter({
         {
             // OAuth provider callback (e.g. Discord)
             path: '/auth/:provider/callback',
-            component: () => import('@/views/OAuthCallback.vue'),
-            props: route => ({
-                code: route.query.code,
-                provider: route.params.provider
-            })
+            component: () => import('@/views/OAuthCallback.vue')
         },
         {
             // Dev login callback
@@ -42,12 +38,7 @@ const router = createRouter({
         {
             path: '/auth/callback',
             name: 'auth-callback',
-            component: () => import('@/views/OAuthCallback.vue'),
-            props: route => ({
-                code: route.query.code,
-                token: route.query.token,
-                provider: route.query.provider || 'dev'
-            })
+            component: () => import('@/views/OAuthCallback.vue')
         },
         {
             path: '/packs',
