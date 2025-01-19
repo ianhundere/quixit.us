@@ -26,7 +26,7 @@ export default defineConfig(({ mode }) => {
         },
         server: {
             port: 3000,
-            host: 'dev.quixit.us',
+            host: rootEnv.HOST_DOMAIN || 'localhost',
             proxy: {
                 '/api': {
                     target: 'http://localhost:8080',

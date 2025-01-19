@@ -49,7 +49,7 @@ func LoadConfig() *Config {
 		Mode:              getEnv("GIN_MODE", "debug"),
 		DevMode:           getEnvBool("DEV_MODE", true),
 		BypassTimeWindows: getEnvBool("DEV_BYPASS_TIME_WINDOWS", true),
-		BypassOAuth:       getEnvBool("DEV_BYPASS_OAUTH", false),
+		BypassOAuth:       getEnvBool("DEV_MODE", true),
 		JWTSecret:         getEnv("JWT_SECRET", "your-super-secret-jwt-key-here"),
 		AccessDuration:    getEnvDuration("JWT_ACCESS_DURATION", 15*time.Minute),
 		RefreshDuration:   getEnvDuration("JWT_REFRESH_DURATION", 168*time.Hour),
