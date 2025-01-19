@@ -26,11 +26,8 @@ export const auth = {
     api.post<{ token: string; user: User }>('/auth/login', { email, password }),
   getCurrentUser: () =>
     api.get<User>('/auth/current-user'),
-  oauthCallback: (code: string, provider: string) => {
-    return api.get(`/auth/oauth/${provider}/callback`, {
-      params: { code }
-    });
-  }
+  oauthCallback: (code: string, provider: string) =>
+    api.get<{ token: string; user: User }>(`/auth/oauth/${provider}/callback`, { params: { code } })
 }
 
 export const packs = {
