@@ -149,7 +149,7 @@ const remainingUploads = computed(() => {
 
 const isUploadAllowed = computed(() => {
   // Always allow uploads in dev mode
-  if (__DEV_BYPASS_TIME_WINDOWS__) {
+  if ((globalThis as any).__DEV_BYPASS_TIME_WINDOWS__) {
     return true
   }
   
@@ -166,7 +166,7 @@ const timeWindowClass = computed(() => ({
 
 const timeWindowMessage = computed(() => {
   // Show bypass message in dev mode
-  if (__DEV_BYPASS_TIME_WINDOWS__) {
+  if ((globalThis as any).__DEV_BYPASS_TIME_WINDOWS__) {
     return 'Time windows bypassed in development mode'
   }
 

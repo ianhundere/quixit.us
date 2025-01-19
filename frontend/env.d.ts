@@ -13,3 +13,10 @@ interface ImportMetaEnv {
 interface ImportMeta {
     readonly env: ImportMetaEnv;
 }
+
+declare global {
+    interface Window {
+        __DEV_BYPASS_TIME_WINDOWS__: boolean;
+    }
+    var __DEV_BYPASS_TIME_WINDOWS__: boolean;
+}

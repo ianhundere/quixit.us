@@ -144,7 +144,7 @@ const fileInput = ref<HTMLInputElement | null>(null)
 // Compute window status
 const isSubmissionAllowed = computed(() => {
   if (!currentPack.value) return false
-  if (__DEV_BYPASS_TIME_WINDOWS__) return true
+  if ((globalThis as any).__DEV_BYPASS_TIME_WINDOWS__) return true
   
   const now = new Date()
   const start = new Date(currentPack.value.startDate)
@@ -158,7 +158,7 @@ const timeWindowClass = computed(() => ({
 }))
 
 const timeWindowMessage = computed(() => {
-  if (__DEV_BYPASS_TIME_WINDOWS__) {
+  if ((globalThis as any).__DEV_BYPASS_TIME_WINDOWS__) {
     return 'Time windows bypassed in development mode'
   }
 
