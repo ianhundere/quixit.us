@@ -3,6 +3,7 @@ package config
 import (
 	"log"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/joho/godotenv"
@@ -60,17 +61,17 @@ func LoadConfig() *Config {
 		GitHub: OAuthConfig{
 			ClientID:     getEnv("OAUTH_GITHUB_CLIENT_ID", ""),
 			ClientSecret: getEnv("OAUTH_GITHUB_CLIENT_SECRET", ""),
-			RedirectURL:  getEnv("OAUTH_GITHUB_REDIRECT_URL", "http://localhost:3000/auth/github/callback"),
+			RedirectURL:  strings.Replace(getEnv("OAUTH_REDIRECT_URL", "http://localhost:3000/auth/callback"), "/callback", "/github/callback", 1),
 		},
 		Google: OAuthConfig{
 			ClientID:     getEnv("OAUTH_GOOGLE_CLIENT_ID", ""),
 			ClientSecret: getEnv("OAUTH_GOOGLE_CLIENT_SECRET", ""),
-			RedirectURL:  getEnv("OAUTH_GOOGLE_REDIRECT_URL", "http://localhost:3000/auth/google/callback"),
+			RedirectURL:  strings.Replace(getEnv("OAUTH_REDIRECT_URL", "http://localhost:3000/auth/callback"), "/callback", "/google/callback", 1),
 		},
 		Discord: OAuthConfig{
 			ClientID:     getEnv("OAUTH_DISCORD_CLIENT_ID", ""),
 			ClientSecret: getEnv("OAUTH_DISCORD_CLIENT_SECRET", ""),
-			RedirectURL:  getEnv("OAUTH_DISCORD_REDIRECT_URL", "http://localhost:3000/auth/discord/callback"),
+			RedirectURL:  strings.Replace(getEnv("OAUTH_REDIRECT_URL", "http://localhost:3000/auth/callback"), "/callback", "/discord/callback", 1),
 		},
 	}
 
