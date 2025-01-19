@@ -94,7 +94,10 @@ const fileInput = ref<HTMLInputElement | null>(null)
 
 const authToken = computed(() => localStorage.getItem('access_token'))
 const isUploadAllowed = computed(() => {
+  console.log('DEV_BYPASS_TIME_WINDOWS:', __DEV_BYPASS_TIME_WINDOWS__)
+  if (__DEV_BYPASS_TIME_WINDOWS__) return true
   if (!pack.value) return false
+  
   const now = new Date()
   const uploadStart = new Date(pack.value.uploadStart)
   const uploadEnd = new Date(pack.value.uploadEnd)
@@ -130,11 +133,7 @@ const uploadSample = async () => {
       throw new Error('Invalid pack ID')
     }
 
-    // Create FormData and append file
-    const formData = new FormData()
-    formData.append('file', selectedFile.value)
-    
-    await api.packs.uploadSample(Number(packId), formData)
+    await api.packs.uploadSample(Number(packId), selectedFile.value)
     
     // Refresh pack data to show new sample
     const { data } = await api.packs.get(Number(packId))
@@ -160,7 +159,7 @@ const downloadPack = async () => {
   try {
     downloading.value = true
     console.log('Starting download for pack:', packId);
-    const { data: blob } = await api.packs.downloadPack(Number(packId))
+    const { data: blob } = await api.packs.download(Number(packId))
     console.log('Received blob:', blob);
     
     // Create download link
@@ -230,9 +229,11 @@ const sampleCount = computed(() => samples.value.length)
 
 onMounted(async () => {
   const packId = parseInt(route.params.id as string)
+  console.log('Loading pack with ID:', packId)
   try {
     loading.value = true
     const { data } = await api.packs.get(packId)
+    console.log('Loaded pack data:', data)
     
     // Initialize samples array if not present
     if (!data.samples) {

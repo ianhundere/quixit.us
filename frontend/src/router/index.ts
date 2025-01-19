@@ -6,6 +6,7 @@ const router = createRouter({
     routes: [
         {
             path: '/',
+            name: 'home',
             component: () => import('@/views/Home.vue'),
             meta: { requiresAuth: true }
         },
@@ -40,6 +41,7 @@ const router = createRouter({
         },
         {
             path: '/auth/callback',
+            name: 'auth-callback',
             component: () => import('@/views/OAuthCallback.vue'),
             props: route => ({
                 code: route.query.code,
@@ -61,6 +63,18 @@ const router = createRouter({
             path: '/submissions',
             component: () => import('@/views/Submissions.vue'),
             meta: { requiresAuth: true }
+        },
+        {
+            path: '/samples/upload',
+            name: 'upload-samples',
+            component: () => import('@/views/SampleUpload.vue'),
+            meta: { requiresAuth: true }
+        },
+        {
+            path: '/tracks/submit',
+            name: 'submit-track',
+            component: () => import('@/views/TrackSubmission.vue'),
+            meta: { requiresAuth: true }
         }
     ]
 })
@@ -79,12 +93,15 @@ router.beforeEach(async (to, from, next) => {
     // If we have a token but no user data, try to get current user
     if (token && !auth.user) {
         try {
-            await auth.getCurrentUser()
-        } catch (error) {
-            // If getting user fails, clear token and redirect to login
-            localStorage.removeItem('token')
-            next('/login')
-            return
+            await auth.init()
+            if (!auth.user) {
+                // Save intended destination
+                localStorage.setItem('redirect_after_login', to.fullPath)
+                return next('/auth/callback')
+            }
+        } catch (e) {
+            console.error('Auth check failed:', e)
+            return next('/auth/callback')
         }
     }
 

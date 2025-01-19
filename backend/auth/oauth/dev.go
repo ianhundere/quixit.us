@@ -2,7 +2,9 @@ package oauth
 
 import (
 	"fmt"
+	"net/url"
 	"sample-exchange/backend/config"
+	"sample-exchange/backend/models"
 )
 
 type DevProvider struct {
@@ -24,6 +26,16 @@ func NewDevProvider(cfg config.OAuthConfig) Provider {
 	}
 }
 
+func (p *DevProvider) GetAuthURL(state string) string {
+	params := url.Values{}
+	params.Add("client_id", p.clientID)
+	params.Add("redirect_uri", p.redirectURL)
+	params.Add("response_type", "code")
+	params.Add("scope", "dev")
+	params.Add("state", state)
+	return fmt.Sprintf("%s?%s", p.authURL, params.Encode())
+}
+
 func (p *DevProvider) ExchangeCode(code string) (*Token, error) {
 	// In development mode, we just return a mock token
 	return &Token{
@@ -39,12 +51,19 @@ func (p *DevProvider) GetUserInfo(token *Token) (*UserInfo, error) {
 		return nil, fmt.Errorf("invalid dev token")
 	}
 
-	// Return mock user data
+	// Return development user info
 	return &UserInfo{
-		ID:        "dev-123",
-		Email:     "dev@example.com",
-		Name:      "Development User",
-		AvatarURL: "https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp",
-		Provider:  p.name,
+		Email:    "dev@example.com",
+		Name:     "Development User",
+		Provider: "dev",
+	}, nil
+}
+
+func (p *DevProvider) GetOrCreateUser(userInfo *UserInfo) (*models.User, error) {
+	// In development mode, always return the same user
+	return &models.User{
+		Email:    userInfo.Email,
+		Name:     userInfo.Name,
+		Provider: userInfo.Provider,
 	}, nil
 }
