@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"time"
 
 	"sample-exchange/backend/config"
 	"sample-exchange/backend/db"
@@ -215,18 +216,48 @@ func (h *Handler) listSubmissions(c *gin.Context) {
 }
 
 func (h *Handler) createSubmission(c *gin.Context) {
-	var submission models.Submission
-	if err := c.ShouldBindJSON(&submission); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid submission data"})
+	// Get file from form data
+	file, header, err := c.Request.FormFile("file")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "No file uploaded"})
+		return
+	}
+	defer file.Close()
+
+	// Get other form fields
+	packID, err := strconv.ParseUint(c.Request.FormValue("sample_pack_id"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid pack ID"})
 		return
 	}
 
 	userID := uint(c.GetInt("user_id"))
-	if err := h.submissionService.CreateSubmission(userID, &submission); err != nil {
+
+	// Store the file using the storage interface
+	filePath, err := h.storage.SaveSubmission(file, header.Filename)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to store file"})
+		return
+	}
+
+	// Create submission record
+	submission := &models.Submission{
+		Title:        c.Request.FormValue("title"),
+		Filename:     header.Filename,
+		FilePath:     filePath,
+		FileSize:     header.Size,
+		UserID:       userID,
+		SamplePackID: uint(packID),
+		SubmittedAt:  time.Now(),
+	}
+
+	if err := h.submissionService.CreateSubmission(userID, submission); err != nil {
+		h.storage.Delete(filePath) // Clean up on error
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
+	submission.FileURL = fmt.Sprintf("/api/submissions/%d/download", submission.ID)
 	c.JSON(http.StatusCreated, submission)
 }
 

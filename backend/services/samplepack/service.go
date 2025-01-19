@@ -53,7 +53,7 @@ func (s *Service) GetPack(id uint) (*models.SamplePack, error) {
 
 func (s *Service) ListPacks(limit int) ([]models.SamplePack, error) {
 	var packs []models.SamplePack
-	result := db.GetDB().Order("created_at desc").Limit(limit).Find(&packs)
+	result := db.GetDB().Where("is_active = ?", false).Order("created_at desc").Limit(limit).Find(&packs)
 	if result.Error != nil {
 		return nil, result.Error
 	}
