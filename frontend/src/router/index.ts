@@ -75,6 +75,12 @@ const router = createRouter({
             name: 'submit-track',
             component: () => import('@/views/TrackSubmission.vue'),
             meta: { requiresAuth: true }
+        },
+        {
+            path: '/tracks',
+            name: 'past-tracks',
+            component: () => import('@/views/PastTracks.vue'),
+            meta: { requiresAuth: true }
         }
     ]
 })

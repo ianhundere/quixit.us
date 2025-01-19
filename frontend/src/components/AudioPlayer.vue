@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, watch, computed, onUnmounted } from 'vue'
 import type { Sample } from '@/types'
+import { api } from '@/api'
 
 const props = defineProps<{
   sample: Sample | null
@@ -16,6 +17,7 @@ const emit = defineEmits<{
 const audioElement = ref<HTMLAudioElement | null>(null)
 const authToken = computed(() => localStorage.getItem('access_token'))
 const isLoading = ref(false)
+const currentAudioUrl = ref<string | null>(null)
 
 // Clean up when component is unmounted
 onUnmounted(() => {
@@ -23,6 +25,9 @@ onUnmounted(() => {
     audioElement.value.pause()
     audioElement.value.src = ''
     audioElement.value.load()
+  }
+  if (currentAudioUrl.value) {
+    URL.revokeObjectURL(currentAudioUrl.value)
   }
 })
 
@@ -42,43 +47,41 @@ const setAudioSource = async (sample: Sample) => {
       audioElement.value.load()
     }
 
-    // Fetch audio file with auth headers
-    const response = await fetch(sample.fileUrl, {
-      headers: {
-        'Authorization': `Bearer ${authToken.value}`
-      }
-    })
-    
-    if (!response.ok) {
-      throw new Error(`Failed to load audio file: ${response.statusText}`)
+    // Clean up previous object URL if it exists
+    if (currentAudioUrl.value) {
+      URL.revokeObjectURL(currentAudioUrl.value)
+      currentAudioUrl.value = null
     }
 
-    const blob = await response.blob()
+    // Remove duplicate /api prefix if present
+    const url = sample.fileUrl.replace('/api/api/', '/api/')
+    
+    // Use api instance to fetch audio file with auth
+    const response = await api.get(url, { 
+      responseType: 'blob'
+    })
+    
+    const blob = response.data
     if (blob.size === 0) {
       throw new Error('Empty audio file')
     }
 
-    // Convert blob to base64 data URL
-    const reader = new FileReader()
-    const dataUrl = await new Promise<string>((resolve, reject) => {
-      reader.onload = () => resolve(reader.result as string)
-      reader.onerror = () => reject(reader.error)
-      reader.readAsDataURL(blob)
-    })
+    // Create object URL directly
+    const audioUrl = URL.createObjectURL(blob)
+    currentAudioUrl.value = audioUrl
 
     // Set the source and load the audio
     if (audioElement.value) {
-      audioElement.value.src = dataUrl
+      audioElement.value.src = audioUrl
       audioElement.value.load()
       
-      if (props.isPlaying) {
-        try {
-          await audioElement.value.play()
-        } catch (error) {
+      // Play when loaded
+      audioElement.value.onloadeddata = () => {
+        audioElement.value?.play().catch(error => {
           console.error('Playback failed:', error)
           emit('error', 'Failed to play audio')
           emit('playbackEnded')
-        }
+        })
       }
     }
   } catch (error) {
