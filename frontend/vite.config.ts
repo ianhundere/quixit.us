@@ -13,10 +13,10 @@ export default defineConfig(({ mode }) => {
         DEV_BYPASS_TIME_WINDOWS: rootEnv.VITE_DEV_BYPASS_TIME_WINDOWS,
         raw: rootEnv
     });
-    
+
     const bypassTimeWindows = rootEnv.VITE_DEV_BYPASS_TIME_WINDOWS === 'true';
     console.log('Bypass time windows:', bypassTimeWindows);
-    
+
     return {
         plugins: [vue()],
         resolve: {
