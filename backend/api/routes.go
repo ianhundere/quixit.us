@@ -1,263 +1,321 @@
 package api
 
 import (
-	"archive/zip"
 	"fmt"
-	"io"
 	"net/http"
-	"os"
-	"path/filepath"
 	"strconv"
-	"time"
 
 	"sample-exchange/backend/config"
+	"sample-exchange/backend/db"
+	"sample-exchange/backend/middleware"
 	"sample-exchange/backend/models"
+	"sample-exchange/backend/services/samplepack"
+	"sample-exchange/backend/services/submission"
 	"sample-exchange/backend/storage"
 
 	"github.com/gin-gonic/gin"
 )
 
+type Handler struct {
+	packService      *samplepack.Service
+	submissionService *submission.Service
+	storage          storage.Storage
+	config           *config.Config
+}
+
+func NewHandler(packService *samplepack.Service, submissionService *submission.Service, storage storage.Storage, cfg *config.Config) *Handler {
+	return &Handler{
+		packService:      packService,
+		submissionService: submissionService,
+		storage:          storage,
+		config:           cfg,
+	}
+}
+
 func Init(r *gin.Engine, store storage.Storage, cfg *config.Config) {
+	packService := samplepack.NewService(cfg)
+	submissionService := submission.NewService(cfg, packService)
+	handler := NewHandler(packService, submissionService, store, cfg)
+
 	// Initialize routes
 	api := r.Group("/api")
+
+	// Auth routes
+	auth := api.Group("/auth")
+	{
+		auth.GET("/current-user", middleware.Auth(), func(c *gin.Context) {
+			userID := uint(c.GetInt("user_id"))
+			email := c.GetString("email")
+			c.JSON(http.StatusOK, gin.H{
+				"ID": userID,
+				"email": email,
+			})
+		})
+	}
+
+	// Admin routes for pack management
+	admin := api.Group("/admin")
+	{
+		admin.POST("/packs", middleware.Auth(), handler.createNewPack)
+		admin.POST("/packs/:id/close", middleware.Auth(), handler.closePack)
+	}
 
 	// Sample pack routes
 	packs := api.Group("/samples/packs")
 	{
-		packs.GET("", listPacks)
-		packs.GET("/:id", getPack)
-		packs.POST("/:id/upload", uploadSample)
-		packs.GET("/:id/download", downloadPack)
+		packs.GET("", handler.listPacks)
+		packs.GET("/:id", handler.getPack)
+		packs.POST("/:id/upload", middleware.Auth(), handler.uploadSample)
+		packs.GET("/:id/download", handler.downloadPack)
 	}
 
 	// Submission routes
 	submissions := api.Group("/submissions")
 	{
-		submissions.GET("", listSubmissions)
-		submissions.POST("", createSubmission)
+		submissions.GET("", middleware.Auth(), handler.listSubmissions)
+		submissions.POST("", middleware.Auth(), handler.createSubmission)
+		submissions.GET("/:id", middleware.Auth(), handler.getSubmission)
+		submissions.GET("/:id/download", middleware.Auth(), handler.downloadSubmission)
 	}
 }
 
-func listPacks(c *gin.Context) {
-	// Get user info from context
-	_ = c.GetInt("user_id")
-	_ = c.GetString("email")
-
-	// Parse dates
-	uploadStart, _ := time.Parse("2006-01-02", "2025-01-01")
-	uploadEnd, _ := time.Parse("2006-01-02", "2025-01-07")
-	startDate, _ := time.Parse("2006-01-02", "2025-01-08")
-	endDate, _ := time.Parse("2006-01-02", "2025-01-14")
-
-	pastUploadStart, _ := time.Parse("2006-01-02", "2024-12-01")
-	pastUploadEnd, _ := time.Parse("2006-01-02", "2024-12-07")
-	pastStartDate, _ := time.Parse("2006-01-02", "2024-12-08")
-	pastEndDate, _ := time.Parse("2006-01-02", "2024-12-14")
-
-	// Return mock data for now
-	currentPack := models.SamplePack{
-		ID:          1,
-		Title:       "Current Pack",
-		Description: "This is the current sample pack",
-		UploadStart: uploadStart,
-		UploadEnd:   uploadEnd,
-		StartDate:   startDate,
-		EndDate:     endDate,
-		IsActive:    true,
+func (h *Handler) listPacks(c *gin.Context) {
+	currentPack, err := h.packService.GetCurrentPack()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get current pack"})
+		return
 	}
 
-	pastPack := models.SamplePack{
-		ID:          2,
-		Title:       "Past Pack 1",
-		Description: "This is a past sample pack",
-		UploadStart: pastUploadStart,
-		UploadEnd:   pastUploadEnd,
-		StartDate:   pastStartDate,
-		EndDate:     pastEndDate,
-		IsActive:    false,
+	pastPacks, err := h.packService.ListPacks(10)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to list past packs"})
+		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{
 		"currentPack": currentPack,
-		"pastPacks":   []models.SamplePack{pastPack},
+		"pastPacks":   pastPacks,
 	})
 }
 
-func getPack(c *gin.Context) {
-	// Get user info from context
-	_ = c.GetInt("user_id")
-	_ = c.GetString("email")
+func (h *Handler) getPack(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid pack ID"})
+		return
+	}
 
-	// Parse dates
-	uploadStart, _ := time.Parse("2006-01-02", "2025-01-01")
-	uploadEnd, _ := time.Parse("2006-01-02", "2025-01-07")
-	startDate, _ := time.Parse("2006-01-02", "2025-01-08")
-	endDate, _ := time.Parse("2006-01-02", "2025-01-14")
-
-	// Return mock data for now
-	pack := models.SamplePack{
-		ID:          1,
-		Title:       "Current Pack",
-		Description: "This is the current sample pack",
-		UploadStart: uploadStart,
-		UploadEnd:   uploadEnd,
-		StartDate:   startDate,
-		EndDate:     endDate,
-		IsActive:    true,
+	pack, err := h.packService.GetPack(uint(id))
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Pack not found"})
+		return
 	}
 
 	c.JSON(http.StatusOK, pack)
 }
 
-func uploadSample(c *gin.Context) {
-	// Get pack ID from URL
-	packID := c.Param("id")
-	id, err := strconv.ParseUint(packID, 10, 64)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid pack ID"})
+func (h *Handler) uploadSample(c *gin.Context) {
+	if !h.packService.IsUploadAllowed() {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Upload window is closed"})
 		return
 	}
 
-	// Get the file from the request
+	packID, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid pack ID"})
+		return
+	}
+
 	file, header, err := c.Request.FormFile("file")
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "no file uploaded"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "No file uploaded"})
 		return
 	}
 	defer file.Close()
 
-	// Get user info from context
-	userID := c.GetInt("user_id")
-	email := c.GetString("email")
+	userID := uint(c.GetInt("user_id"))
 
-	// Create a temporary file to store the upload
-	tmpfile, err := os.CreateTemp("", "sample-*.wav")
+	// Store the file using the storage interface
+	filePath, err := h.storage.SaveSample(file, header.Filename)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create temporary file"})
-		return
-	}
-	defer os.Remove(tmpfile.Name())
-
-	// Copy the file data to the temporary file
-	if _, err := io.Copy(tmpfile, file); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to save file"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to store file"})
 		return
 	}
 
-	// Return mock sample data
-	sample := models.Sample{
-		ID:           uint(id),
+	sample := &models.Sample{
 		Filename:     header.Filename,
-		FileURL:      fmt.Sprintf("/api/samples/download/%d", id),
+		FilePath:     filePath,
 		FileSize:     header.Size,
-		UserID:       uint(userID),
-		User:         models.User{ID: uint(userID), Email: email},
-		SamplePackID: uint(id),
+		UserID:       userID,
+		SamplePackID: uint(packID),
 	}
 
+	if err := h.packService.AddSample(uint(packID), sample); err != nil {
+		h.storage.Delete(filePath) // Clean up on error
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to add sample"})
+		return
+	}
+
+	sample.FileURL = fmt.Sprintf("/api/samples/packs/%d/samples/%d/download", packID, sample.ID)
 	c.JSON(http.StatusOK, sample)
 }
 
-func downloadPack(c *gin.Context) {
-	// Get pack ID from URL
-	packID := c.Param("id")
-	if packID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Pack ID is required"})
-		return
-	}
-
-	// Create a temporary zip file
-	tmpFile, err := os.CreateTemp("", "pack-*.zip")
+func (h *Handler) downloadPack(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create temporary file"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid pack ID"})
 		return
 	}
-	defer os.Remove(tmpFile.Name())
 
-	// Create zip writer
-	zipWriter := zip.NewWriter(tmpFile)
-	defer zipWriter.Close()
-
-	// Get all .wav files from storage directory
-	files, err := os.ReadDir("storage")
+	pack, err := h.packService.GetPack(uint(id))
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to read storage directory"})
+		c.JSON(http.StatusNotFound, gin.H{"error": "Pack not found"})
 		return
 	}
 
-	// Add each .wav file to the zip
-	for _, file := range files {
-		if filepath.Ext(file.Name()) != ".wav" {
-			continue
-		}
-
-		// Open the file
-		f, err := os.Open(filepath.Join("storage", file.Name()))
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to read file"})
-			return
-		}
-		defer f.Close()
-
-		// Create zip entry
-		zipFile, err := zipWriter.Create(file.Name())
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create zip entry"})
-			return
-		}
-
-		// Copy file contents to zip
-		if _, err := io.Copy(zipFile, f); err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to write to zip"})
-			return
-		}
-	}
-
-	// Close the zip writer
-	if err := zipWriter.Close(); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to finalize zip"})
+	// Create temporary zip file
+	zipPath := fmt.Sprintf("/tmp/pack_%d.zip", id)
+	if err := h.packService.CreatePackZip(*pack, zipPath); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create zip file"})
 		return
 	}
+	defer h.storage.Delete(zipPath)
 
-	// Seek to beginning of file
-	if _, err := tmpFile.Seek(0, 0); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to prepare file"})
-		return
-	}
-
-	// Set headers for download
 	c.Header("Content-Description", "File Transfer")
 	c.Header("Content-Type", "application/zip")
-	c.Header("Content-Disposition", fmt.Sprintf("attachment; filename=pack_%s.zip", packID))
+	c.Header("Content-Disposition", fmt.Sprintf("attachment; filename=pack_%d.zip", id))
 	c.Header("Content-Transfer-Encoding", "binary")
 	c.Header("Expires", "0")
 	c.Header("Cache-Control", "must-revalidate")
 	c.Header("Pragma", "public")
 
-	// Stream the file
-	c.File(tmpFile.Name())
+	c.File(zipPath)
 }
 
-func listSubmissions(c *gin.Context) {
-	// Get user info from context
-	userID := c.GetInt("user_id")
-	email := c.GetString("email")
+func (h *Handler) listSubmissions(c *gin.Context) {
+	packID, err := strconv.ParseUint(c.Query("pack_id"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid pack ID"})
+		return
+	}
 
-	// Return mock data for now
-	c.JSON(http.StatusOK, []models.Submission{
-		{
-			ID:          1,
-			Title:       "My Submission",
-			Description: "This is my submission",
-			FileURL:     "http://example.com/submission.zip",
-			User: models.User{
-				ID:    uint(userID),
-				Email: email,
-			},
-		},
-	})
+	limit := 10
+	offset := 0
+	if offsetStr := c.Query("offset"); offsetStr != "" {
+		offset, _ = strconv.Atoi(offsetStr)
+	}
+
+	submissions, err := h.submissionService.ListSubmissions(uint(packID), limit, offset)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to list submissions"})
+		return
+	}
+
+	c.JSON(http.StatusOK, submissions)
 }
 
-func createSubmission(c *gin.Context) {
-	c.JSON(http.StatusNotImplemented, gin.H{"error": "not implemented"})
+func (h *Handler) createSubmission(c *gin.Context) {
+	var submission models.Submission
+	if err := c.ShouldBindJSON(&submission); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid submission data"})
+		return
+	}
+
+	userID := uint(c.GetInt("user_id"))
+	if err := h.submissionService.CreateSubmission(userID, &submission); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusCreated, submission)
+}
+
+func (h *Handler) getSubmission(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid submission ID"})
+		return
+	}
+
+	submission, err := h.submissionService.GetSubmission(uint(id))
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Submission not found"})
+		return
+	}
+
+	c.JSON(http.StatusOK, submission)
+}
+
+func (h *Handler) downloadSubmission(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid submission ID"})
+		return
+	}
+
+	submission, err := h.submissionService.GetSubmission(uint(id))
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Submission not found"})
+		return
+	}
+
+	c.Header("Content-Description", "File Transfer")
+	c.Header("Content-Type", "application/octet-stream")
+	c.Header("Content-Disposition", fmt.Sprintf("attachment; filename=%s", submission.Filename))
+	c.Header("Content-Transfer-Encoding", "binary")
+	c.Header("Expires", "0")
+	c.Header("Cache-Control", "must-revalidate")
+	c.Header("Pragma", "public")
+
+	c.File(submission.FilePath)
+}
+
+func (h *Handler) createNewPack(c *gin.Context) {
+	var req struct {
+		Title       string `json:"title"`
+		Description string `json:"description"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request data"})
+		return
+	}
+
+	pack, err := h.packService.CreatePack()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create pack"})
+		return
+	}
+
+	pack.Title = req.Title
+	pack.Description = req.Description
+
+	if err := db.GetDB().Save(pack).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save pack"})
+		return
+	}
+
+	c.JSON(http.StatusCreated, pack)
+}
+
+func (h *Handler) closePack(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid pack ID"})
+		return
+	}
+
+	pack, err := h.packService.GetPack(uint(id))
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Pack not found"})
+		return
+	}
+
+	pack.IsActive = false
+	if err := db.GetDB().Save(pack).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to close pack"})
+		return
+	}
+
+	c.JSON(http.StatusOK, pack)
 }

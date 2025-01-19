@@ -41,7 +41,10 @@ func (s *Service) GetCurrentPack() (*models.SamplePack, error) {
 
 func (s *Service) GetPack(id uint) (*models.SamplePack, error) {
 	var pack models.SamplePack
-	err := db.GetDB().Preload("Samples").First(&pack, id).Error
+	err := db.GetDB().
+		Preload("Samples").
+		Preload("Samples.User").
+		First(&pack, id).Error
 	if err == gorm.ErrRecordNotFound {
 		return nil, errors.NewNotFoundError("Sample pack")
 	}

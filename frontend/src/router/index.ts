@@ -15,6 +15,7 @@ const router = createRouter({
             meta: { guest: true }
         },
         {
+            // OAuth provider callback (e.g. Discord)
             path: '/auth/:provider/callback',
             component: () => import('@/views/OAuthCallback.vue'),
             props: route => ({
@@ -23,17 +24,10 @@ const router = createRouter({
             })
         },
         {
-            path: '/auth/callback',
-            component: () => import('@/views/OAuthCallback.vue'),
-            props: route => ({
-                code: route.query.code,
-                provider: route.query.provider || 'dev'
-            })
-        },
-        {
+            // Dev login callback
             path: '/auth/dev/login',
             redirect: to => {
-                const { client_id, redirect_uri, response_type, scope, state } = to.query
+                const { state } = to.query;
                 return {
                     path: '/auth/callback',
                     query: {
@@ -43,6 +37,15 @@ const router = createRouter({
                     }
                 }
             }
+        },
+        {
+            path: '/auth/callback',
+            component: () => import('@/views/OAuthCallback.vue'),
+            props: route => ({
+                code: route.query.code,
+                token: route.query.token,
+                provider: route.query.provider || 'dev'
+            })
         },
         {
             path: '/packs',

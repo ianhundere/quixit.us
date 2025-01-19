@@ -2,7 +2,6 @@ package main
 
 import (
 	"log"
-	"os"
 
 	"sample-exchange/backend/api"
 	"sample-exchange/backend/auth/oauth"
@@ -15,53 +14,64 @@ import (
 )
 
 func main() {
-	// Use debug mode in development
-	if os.Getenv("GIN_MODE") != "release" {
-		gin.SetMode(gin.DebugMode)
-	}
-
 	// Load configuration
 	cfg := config.LoadConfig()
 
-	// Set up database
-	database := db.SetupDB()
-
-	// Initialize OAuth providers
-	providers := oauth.NewProviders(cfg)
+	// Setup database
+	if err := db.SetupDB(); err != nil {
+		log.Fatalf("Failed to setup database: %v", err)
+	}
 
 	// Initialize storage
 	store := storage.NewStorage(cfg)
 
-	// Create router
+	// Initialize router
 	r := gin.Default()
 
-	// Security middlewares
-	r.Use(middleware.SecurityHeaders())
+	// Setup CORS
 	r.Use(middleware.CORS())
 
-	// Create handlers
-	oauthHandler := api.NewOAuthHandler(database, providers)
+	// Initialize OAuth providers
+	providers := map[string]oauth.Provider{
+		"dev": oauth.NewDevProvider(config.OAuthConfig{
+			RedirectURL: cfg.OAuthRedirectURL,
+		}),
+		"discord": oauth.NewDiscordProvider(config.OAuthConfig{
+			ClientID:     cfg.Discord.ClientID,
+			ClientSecret: cfg.Discord.ClientSecret,
+			RedirectURL:  cfg.Discord.RedirectURL,
+		}),
+		"github": oauth.NewGitHubProvider(config.OAuthConfig{
+			ClientID:     cfg.GitHub.ClientID,
+			ClientSecret: cfg.GitHub.ClientSecret,
+			RedirectURL:  cfg.GitHub.RedirectURL,
+		}),
+		"google": oauth.NewGoogleProvider(config.OAuthConfig{
+			ClientID:     cfg.Google.ClientID,
+			ClientSecret: cfg.Google.ClientSecret,
+			RedirectURL:  cfg.Google.RedirectURL,
+		}),
+	}
 
-	// Public routes
+	// Initialize handlers
+	oauthHandler := api.NewOAuthHandler(db.GetDB(), providers, cfg.OAuthRedirectURL)
+
+	// OAuth routes
 	auth := r.Group("/auth")
 	{
-		// OAuth routes
-		auth.GET("/oauth/:provider", oauthHandler.Login)
-		auth.GET("/oauth/:provider/callback", oauthHandler.Callback)
+		oauth := auth.Group("/oauth")
+		{
+			oauth.GET("/:provider", oauthHandler.Login)
+			oauth.GET("/:provider/callback", oauthHandler.Callback)
+		}
 	}
 
-	// Protected routes
-	protected := r.Group("/api")
-	protected.Use(middleware.Auth())
-	{
-		// Add protected routes here
-	}
-
-	// Setup other routes
+	// Initialize API routes
 	api.Init(r, store, cfg)
 
 	// Start server
-	if err := r.Run(":8080"); err != nil {
-		log.Fatal("Failed to start server:", err)
+	log.Printf("Starting server on :%s", cfg.Port)
+	if err := r.Run(":" + cfg.Port); err != nil {
+		log.Fatalf("Failed to start server: %v", err)
 	}
 }

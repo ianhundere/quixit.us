@@ -20,6 +20,7 @@ import { useAuthStore } from '@/stores/auth'
 
 interface Props {
   code?: string
+  token?: string
   provider?: string
 }
 
@@ -30,16 +31,23 @@ const error = ref<string | null>(null)
 const loading = ref(true)
 
 onMounted(async () => {
-  if (!props.code) {
-    error.value = 'No authorization code provided'
-    loading.value = false
-    return
-  }
-
   try {
-    await auth.handleOAuthCallback(props.code, props.provider || 'dev', router)
+    // Handle direct token (from dev login)
+    if (props.token) {
+      await auth.handleToken(props.token, router)
+      return
+    }
+
+    // Handle OAuth code
+    if (props.code) {
+      await auth.handleOAuthCallback(props.code, props.provider || 'dev', router)
+      return
+    }
+
+    error.value = 'No token or authorization code provided'
   } catch (e: any) {
-    error.value = e.message || 'Failed to complete login'
+    console.error('OAuth callback error:', e)
+    error.value = e.response?.data?.error || e.message || 'Failed to complete login'
   } finally {
     loading.value = false
   }

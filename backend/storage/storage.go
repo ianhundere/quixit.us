@@ -11,6 +11,7 @@ import (
 type Storage interface {
 	SaveSample(file io.Reader, filename string) (string, error)
 	SaveSubmission(file io.Reader, filename string) (string, error)
+	Delete(filepath string) error
 }
 
 type FileStorage struct {
@@ -31,6 +32,10 @@ func (s *FileStorage) SaveSample(file io.Reader, filename string) (string, error
 
 func (s *FileStorage) SaveSubmission(file io.Reader, filename string) (string, error) {
 	return s.saveFile(s.submissionPath, file, filename)
+}
+
+func (s *FileStorage) Delete(filepath string) error {
+	return os.Remove(filepath)
 }
 
 func (s *FileStorage) saveFile(basePath string, file io.Reader, filename string) (string, error) {

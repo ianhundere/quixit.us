@@ -21,15 +21,38 @@ export const useAuthStore = defineStore('auth', () => {
     // Initialize auth state
     const init = async () => {
         const token = localStorage.getItem('token');
-        if (token) {
+        if (!token) {
+            console.log('No token found in localStorage');
+            return null;
+        }
+
+        try {
+            loading.value = true;
+            error.value = null;
+            
+            // Set auth header
             api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-            try {
-                await getCurrentUser();
-            } catch (e) {
-                // If getting user fails, clear token
-                localStorage.removeItem('token');
-                delete api.defaults.headers.common['Authorization'];
+            
+            // Get current user
+            const { data } = await api.auth.getCurrentUser();
+            if (!data || !data.ID) {
+                throw new Error('Invalid user data received');
             }
+            
+            user.value = data;
+            console.log('User loaded:', user.value.ID);
+            
+            return user.value;
+        } catch (e: any) {
+            console.error('Failed to initialize auth:', e);
+            // If getting user fails, clear token and user
+            localStorage.removeItem('token');
+            delete api.defaults.headers.common['Authorization'];
+            user.value = null;
+            error.value = e.response?.data?.error || e.message || 'Failed to initialize auth';
+            throw error.value;
+        } finally {
+            loading.value = false;
         }
     };
 
@@ -39,20 +62,56 @@ export const useAuthStore = defineStore('auth', () => {
             loading.value = true;
             error.value = null;
 
+            // Get token from OAuth callback
             const { data } = await api.auth.oauthCallback(code, provider);
-            const { token, user: userData } = data;
+            console.log('OAuth callback response:', data);
+            
+            if (!data || !data.token) {
+                throw new Error('Invalid OAuth response - no token received');
+            }
+
+            // Handle the token
+            await handleToken(data.token, router);
+        } catch (e: any) {
+            console.error('OAuth callback failed:', e);
+            error.value = e.response?.data?.error || e.message || 'OAuth login failed';
+            throw error.value;
+        } finally {
+            loading.value = false;
+        }
+    };
+
+    // Handle direct token
+    const handleToken = async (token: string, router: Router) => {
+        try {
+            loading.value = true;
+            error.value = null;
 
             // Save token and set auth header
             localStorage.setItem('token', token);
             api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
 
-            // Update user state
-            user.value = userData;
+            // Get user data
+            const { data } = await api.auth.getCurrentUser();
+            console.log('Got user data:', data);
+            
+            if (!data || !data.ID) {
+                throw new Error('Invalid user data received');
+            }
+
+            // Set user data
+            user.value = data;
+            console.log('Token handled successfully, user:', user.value.ID);
 
             // Redirect to home
             router.push('/');
         } catch (e: any) {
-            error.value = e.response?.data?.error || e.message || 'OAuth login failed';
+            console.error('Token handling failed:', e);
+            // Clean up on failure
+            localStorage.removeItem('token');
+            delete api.defaults.headers.common['Authorization'];
+            user.value = null;
+            error.value = e.message || 'Failed to handle token';
             throw error.value;
         } finally {
             loading.value = false;
@@ -66,7 +125,12 @@ export const useAuthStore = defineStore('auth', () => {
             error.value = null;
 
             const { data } = await api.auth.getCurrentUser();
+            if (!data || !data.ID) {
+                throw new Error('Invalid user data received');
+            }
+            
             user.value = data;
+            return user.value;
         } catch (e: any) {
             error.value = e.response?.data?.error || e.message || 'Failed to get user';
             throw error.value;
@@ -90,6 +154,7 @@ export const useAuthStore = defineStore('auth', () => {
         isAuthenticated,
         init,
         handleOAuthCallback,
+        handleToken,
         getCurrentUser,
         logout
     };

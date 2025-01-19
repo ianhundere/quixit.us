@@ -3,25 +3,31 @@ package api
 import (
 	"crypto/rand"
 	"encoding/base64"
+	"fmt"
 	"net/http"
+	"net/url"
 
 	"sample-exchange/backend/auth"
 	"sample-exchange/backend/auth/oauth"
-	"sample-exchange/backend/models"
+	"sample-exchange/backend/services/user"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 )
 
 type OAuthHandler struct {
-	db        *gorm.DB
-	providers map[string]oauth.Provider
+	db          *gorm.DB
+	providers   map[string]oauth.Provider
+	userSvc     *user.Service
+	frontendURL string
 }
 
-func NewOAuthHandler(db *gorm.DB, providers map[string]oauth.Provider) *OAuthHandler {
+func NewOAuthHandler(db *gorm.DB, providers map[string]oauth.Provider, redirectURL string) *OAuthHandler {
 	return &OAuthHandler{
-		db:        db,
-		providers: providers,
+		db:          db,
+		providers:   providers,
+		userSvc:     user.NewService(),
+		frontendURL: redirectURL,
 	}
 }
 
@@ -40,15 +46,32 @@ func (h *OAuthHandler) Login(c *gin.Context) {
 
 	// Handle development login
 	if provider == "dev" {
-		state, err := generateState()
+		// Create or get development user
+		user, err := h.userSvc.GetOrCreateOAuthUser("dev@example.com", "Development User", "dev", "")
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to generate state"})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create user"})
 			return
 		}
 
-		// Redirect to frontend callback with development code
-		redirectURI := "http://localhost:3000/auth/dev/login"
-		c.Redirect(http.StatusTemporaryRedirect, redirectURI+"?client_id=dev-client&redirect_uri=http://localhost:3000/auth/callback&response_type=code&scope=dev&state="+state)
+		// Generate JWT token
+		token, err := auth.GenerateToken(user)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to generate token"})
+			return
+		}
+
+		// Build redirect URL with query parameters
+		redirectURL, err := url.Parse(h.frontendURL)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "invalid redirect URL"})
+			return
+		}
+		q := redirectURL.Query()
+		q.Set("token", token)
+		q.Set("provider", "dev")
+		redirectURL.RawQuery = q.Encode()
+
+		c.Redirect(http.StatusTemporaryRedirect, redirectURL.String())
 		return
 	}
 
@@ -72,30 +95,16 @@ func (h *OAuthHandler) Login(c *gin.Context) {
 	c.Redirect(http.StatusTemporaryRedirect, authURL)
 }
 
-// Callback handles the OAuth callback from providers
+// Callback handles the OAuth callback from the provider
 func (h *OAuthHandler) Callback(c *gin.Context) {
 	provider := c.Param("provider")
+	code := c.Query("code")
+	state := c.Query("state")
 
-	// Handle development callback
-	if provider == "dev" {
-		// Create development user
-		user := models.User{
-			Email:    "dev@example.com",
-			Name:     "Development User",
-			Provider: "dev",
-		}
-
-		// Generate JWT tokens
-		accessToken, err := auth.GenerateToken(&user)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to generate token"})
-			return
-		}
-
-		c.JSON(http.StatusOK, gin.H{
-			"token": accessToken,
-			"user":  user,
-		})
+	// Verify state
+	storedState, _ := c.Cookie("oauth_state")
+	if state == "" || state != storedState {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid state parameter"})
 		return
 	}
 
@@ -105,59 +114,44 @@ func (h *OAuthHandler) Callback(c *gin.Context) {
 		return
 	}
 
-	// Verify state
-	state, _ := c.Cookie("oauth_state")
-	if state == "" || state != c.Query("state") {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid state"})
-		return
-	}
-
-	// Clear state cookie
-	c.SetCookie("oauth_state", "", -1, "/", "", false, true)
-
 	// Exchange code for token
-	code := c.Query("code")
 	token, err := p.ExchangeCode(code)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to exchange code"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("failed to exchange code: %v", err)})
 		return
 	}
 
 	// Get user info from provider
 	userInfo, err := p.GetUserInfo(token)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get user info"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("failed to get user info: %v", err)})
 		return
 	}
 
-	// Find or create user
-	var user models.User
-	result := h.db.Where("email = ?", userInfo.Email).First(&user)
-	if result.Error == gorm.ErrRecordNotFound {
-		// Create new user
-		user = models.User{
-			Email:    userInfo.Email,
-			Name:     userInfo.Name,
-			Provider: userInfo.Provider,
-		}
-		if err := h.db.Create(&user).Error; err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create user"})
-			return
-		}
-	} else if result.Error != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "database error"})
+	// Create or update user in database
+	user, err := h.userSvc.GetOrCreateOAuthUser(userInfo.Email, userInfo.Name, provider, userInfo.AvatarURL)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create/update user"})
 		return
 	}
 
 	// Generate JWT token
-	accessToken, err := auth.GenerateToken(&user)
+	jwtToken, err := auth.GenerateToken(user)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to generate token"})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"token": accessToken,
-		"user":  user,
-	})
+	// Build redirect URL with query parameters
+	redirectURL, err := url.Parse(h.frontendURL)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "invalid redirect URL"})
+		return
+	}
+	q := redirectURL.Query()
+	q.Set("token", jwtToken)
+	q.Set("provider", provider)
+	redirectURL.RawQuery = q.Encode()
+
+	c.Redirect(http.StatusTemporaryRedirect, redirectURL.String())
 }

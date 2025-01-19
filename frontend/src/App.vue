@@ -15,9 +15,15 @@ const handleLogout = () => {
     <nav v-if="auth.isAuthenticated" class="bg-white shadow">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="flex justify-between h-16">
-          <div class="flex">
+          <div class="flex space-x-8">
             <router-link to="/" class="flex items-center px-2 py-2 text-gray-700 hover:text-gray-900">
               Home
+            </router-link>
+            <router-link to="/packs" class="flex items-center px-2 py-2 text-gray-700 hover:text-gray-900">
+              Sample Packs
+            </router-link>
+            <router-link to="/submissions" class="flex items-center px-2 py-2 text-gray-700 hover:text-gray-900">
+              Submissions
             </router-link>
           </div>
           <div class="flex items-center">
