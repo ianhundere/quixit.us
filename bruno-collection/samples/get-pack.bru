@@ -5,5 +5,20 @@ meta {
 }
 
 get {
-  url: "{{base_url}}/api/samples/packs/{{pack_id}}"
-} 
+  url: {{base_url}}/api/samples/packs/{{pack_id}}
+}
+
+headers {
+  Authorization: Bearer {{auth_token}}
+}
+
+tests {
+  test("should return 200", function() {
+    expect(res.status).to.equal(200)
+  })
+
+  test("should return pack with samples", function() {
+    expect(res.body).to.have.property('samples')
+    expect(res.body.ID).to.equal(parseInt(req.url.match(/packs\/(\d+)/)[1]))
+  })
+}

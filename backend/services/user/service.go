@@ -9,6 +9,11 @@ import (
 	"gorm.io/gorm"
 )
 
+const (
+	TestUserEmail = "test@example.com"
+	TestUserName  = "Test User"
+)
+
 type Service struct {
 	db *gorm.DB
 }
@@ -60,6 +65,7 @@ func (s *Service) GetOrCreateOAuthUser(email, name, provider, avatar string) (*m
 			Name:     name,
 			Provider: provider,
 			Avatar:   avatar,
+			IsAdmin:  provider == "dev", // make dev users admins
 		}
 		if err := s.db.Create(&user).Error; err != nil {
 			return nil, err
@@ -69,6 +75,7 @@ func (s *Service) GetOrCreateOAuthUser(email, name, provider, avatar string) (*m
 		user.Name = name
 		user.Provider = provider
 		user.Avatar = avatar
+		user.IsAdmin = provider == "dev" // make dev users admins
 		if err := s.db.Save(&user).Error; err != nil {
 			return nil, err
 		}
@@ -89,4 +96,21 @@ func (s *Service) List(limit, offset int) ([]models.User, error) {
 // Delete removes a user by their ID
 func (s *Service) Delete(id uint) error {
 	return s.db.Delete(&models.User{}, id).Error
+}
+
+// CreateTestUser creates a test user for development
+func (s *Service) CreateTestUser() (*models.User, error) {
+	user := &models.User{
+		Email:    TestUserEmail,
+		Name:     TestUserName,
+		Provider: "dev",
+		Avatar:   "https://www.gravatar.com/avatar/test?d=identicon",
+		IsAdmin:  true, // Make test users admins
+	}
+
+	if err := s.db.Create(user).Error; err != nil {
+		return nil, err
+	}
+
+	return user, nil
 }

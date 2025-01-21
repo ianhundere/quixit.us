@@ -5,5 +5,9 @@ meta {
 }
 
 get {
-  url: "{{base_url}}/api/samples/packs/{{pack_id}}/download"
+  url: {{base_url}}/api/samples/packs/{{pack_id}}/download
+}
+
+headers {
+  Authorization: Bearer {{auth_token}}
 } 

@@ -2,7 +2,6 @@ package auth
 
 import (
 	"errors"
-	"os"
 	"time"
 
 	"sample-exchange/backend/models"
@@ -15,19 +14,26 @@ var (
 	ErrExpiredToken = errors.New("token has expired")
 )
 
+var jwtSecret string
+
+// SetJWTSecret sets the secret used for signing JWTs
+func SetJWTSecret(secret string) {
+	jwtSecret = secret
+}
+
 func GenerateToken(user *models.User) (string, error) {
 	// Create the Claims
 	claims := jwt.MapClaims{
 		"id":    user.ID,
 		"email": user.Email,
-		"exp":   time.Now().Add(time.Hour * 24).Unix(),
+		"exp":   time.Now().Add(24 * time.Hour).Unix(),
 	}
 
 	// Create token
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 
 	// Generate encoded token
-	return token.SignedString([]byte(os.Getenv("JWT_SECRET")))
+	return token.SignedString([]byte(jwtSecret))
 }
 
 func ValidateToken(tokenString string) (*jwt.MapClaims, error) {
@@ -35,7 +41,7 @@ func ValidateToken(tokenString string) (*jwt.MapClaims, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, ErrInvalidToken
 		}
-		return []byte(os.Getenv("JWT_SECRET")), nil
+		return []byte(jwtSecret), nil
 	})
 
 	if err != nil {

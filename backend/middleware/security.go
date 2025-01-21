@@ -70,7 +70,9 @@ func ValidateFileUpload() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		file, err := c.FormFile("file")
 		if err != nil {
-			c.Next() // Skip validation if no file
+			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{
+				"error": "No file uploaded",
+			})
 			return
 		}
 

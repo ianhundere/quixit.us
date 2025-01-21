@@ -51,10 +51,10 @@ func (p *DevProvider) GetUserInfo(token *Token) (*UserInfo, error) {
 		return nil, fmt.Errorf("invalid dev token")
 	}
 
-	// Return development user info
+	// Return test user info to match our test data
 	return &UserInfo{
-		Email:    "dev@example.com",
-		Name:     "Development User",
+		Email:    "test@example.com",
+		Name:     "Test User",
 		Provider: "dev",
 	}, nil
 }

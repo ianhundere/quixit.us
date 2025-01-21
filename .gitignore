@@ -55,3 +55,27 @@ dist-ssr
 *.sw?
 *.code-workspace
 .vite
+
+# Environment files with sensitive data
+environments/*.env.json
+.env
+
+# Output files
+bruno_output
+**/output/
+**/reports/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Storage
+storage/
+
+# Test files
+**/test_*.wav
+**/test_*.mp3
+**/sample.wav
+**/track.mp3
+bruno-collection/test_*
+**/tmp/test_*

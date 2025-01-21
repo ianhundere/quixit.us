@@ -71,6 +71,26 @@ func (s *Service) GetSubmission(id uint) (*models.Submission, error) {
 	return &submission, nil
 }
 
+// CreateTestSubmission creates a test submission for development
+func (s *Service) CreateTestSubmission(userID uint, packID uint) (*models.Submission, error) {
+	submission := &models.Submission{
+		Title:        "Test Submission",
+		Description:  "A submission for testing",
+		Filename:     "test_submission.mp3",
+		FilePath:     "/tmp/test_submission.mp3",
+		FileSize:     1024,
+		UserID:       userID,
+		SamplePackID: packID,
+		SubmittedAt:  time.Now(),
+	}
+
+	if err := db.GetDB().Create(submission).Error; err != nil {
+		return nil, err
+	}
+
+	return submission, nil
+}
+
 func (s *Service) ListSubmissions(packID uint, limit, offset int) ([]models.Submission, error) {
 	var submissions []models.Submission
 	err := db.GetDB().Where("sample_pack_id = ?", packID).

@@ -16,4 +16,5 @@ type User struct {
 	Name     string `json:"name"`
 	Provider string `json:"provider"` // OAuth provider (github, google, discord)
 	Avatar   string `json:"avatar"`   // URL to user's avatar
+	IsAdmin  bool   `json:"isAdmin" gorm:"default:false"` // Whether the user has admin privileges
 }

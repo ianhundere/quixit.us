@@ -61,25 +61,17 @@ func (s *Service) ListPacks(limit int) ([]models.SamplePack, error) {
 }
 
 func (s *Service) CreatePack() (*models.SamplePack, error) {
-	// Deactivate any currently active packs
-	db.GetDB().Model(&models.SamplePack{}).Where("is_active = ?", true).Update("is_active", false)
+	// Deactivate any currently active pack
+	if err := db.GetDB().Model(&models.SamplePack{}).Where("is_active = ?", true).Update("is_active", false).Error; err != nil {
+		return nil, err
+	}
 
-	// Calculate time windows
+	// Set time windows
 	now := time.Now()
-
-	// Find next Friday 00:00
-	uploadStart := nextWeekday(now, time.Friday)
-	uploadStart = time.Date(uploadStart.Year(), uploadStart.Month(), uploadStart.Day(), 0, 0, 0, 0, uploadStart.Location())
-
-	// Sunday 23:59:59
-	uploadEnd := uploadStart.Add(72 * time.Hour).Add(-1 * time.Second)
-
-	// Next Monday 00:00
-	startDate := nextWeekday(uploadEnd, time.Monday)
-	startDate = time.Date(startDate.Year(), startDate.Month(), startDate.Day(), 0, 0, 0, 0, startDate.Location())
-
-	// Friday 00:00
-	endDate := startDate.Add(96 * time.Hour)
+	uploadStart := now
+	uploadEnd := now.Add(72 * time.Hour)    // 3 days for upload window
+	startDate := uploadEnd
+	endDate := startDate.Add(240 * time.Hour) // 10 days for submission window
 
 	pack := &models.SamplePack{
 		Title:       "", // Will be set by caller
@@ -143,7 +135,7 @@ func (s *Service) AddSample(packID uint, sample *models.Sample) error {
 		return err
 	}
 
-	if !s.IsUploadAllowed() {
+	if !s.IsUploadAllowedForPack(packID) {
 		return errors.NewAuthorizationError("Upload window is closed")
 	}
 
@@ -151,6 +143,43 @@ func (s *Service) AddSample(packID uint, sample *models.Sample) error {
 }
 
 // CreatePackZip creates a zip file containing all samples in a pack
+// CreateTestPack creates a sample pack with test data
+func (s *Service) CreateTestPack(userID uint) (*models.SamplePack, error) {
+	pack, err := s.CreatePack()
+	if err != nil {
+		return nil, err
+	}
+
+	pack.Title = "Test Sample Pack"
+	pack.Description = "A sample pack for testing"
+	
+	// Set time windows to be currently active
+	now := time.Now()
+	pack.UploadStart = now.Add(-24 * time.Hour)  // Started yesterday
+	pack.UploadEnd = now.Add(24 * time.Hour)     // Ends tomorrow
+	pack.StartDate = now.Add(-24 * time.Hour)    // Started yesterday
+	pack.EndDate = now.Add(7 * 24 * time.Hour)   // Ends in a week
+
+	if err := db.GetDB().Save(pack).Error; err != nil {
+		return nil, err
+	}
+
+	// Create a test sample
+	sample := &models.Sample{
+		Filename:     "test_sample.wav",
+		FilePath:     "/tmp/test_sample.wav",
+		FileSize:     1024,
+		UserID:       userID,
+		SamplePackID: pack.ID,
+	}
+
+	if err := s.AddSample(pack.ID, sample); err != nil {
+		return nil, err
+	}
+
+	return pack, nil
+}
+
 func (s *Service) CreatePackZip(pack models.SamplePack, zipPath string) error {
 	log.Printf("Creating zip file for pack %d with %d samples", pack.ID, len(pack.Samples))
 
@@ -196,4 +225,23 @@ func (s *Service) CreatePackZip(pack models.SamplePack, zipPath string) error {
 
 	log.Printf("Successfully created zip file at %s", zipPath)
 	return nil
+}
+
+func (s *Service) IsUploadAllowedForPack(packID uint) bool {
+	if s.cfg.BypassTimeWindows {
+		return true
+	}
+
+	pack, err := s.GetPack(packID)
+	if err != nil {
+		return false
+	}
+
+	now := time.Now()
+	log.Printf("Upload window for pack %d: %s to %s (now: %s)",
+		packID,
+		pack.UploadStart.Format(time.RFC3339),
+		pack.UploadEnd.Format(time.RFC3339),
+		now.Format(time.RFC3339))
+	return now.After(pack.UploadStart) && now.Before(pack.UploadEnd)
 }

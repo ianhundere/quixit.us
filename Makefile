@@ -32,6 +32,8 @@ setup-dev: install
 	@echo "Setting up development environment..."
 	mkdir -p storage
 	make db-up
+	@echo "Setting up test data..."
+	@go run ./backend/testdata/cmd/setup_cmd.go
 
 # Production build
 build: build-frontend build-backend

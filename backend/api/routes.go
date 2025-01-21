@@ -57,8 +57,8 @@ func Init(r *gin.Engine, store storage.Storage, cfg *config.Config) {
 	// Admin routes for pack management
 	admin := api.Group("/admin")
 	{
-		admin.POST("/packs", middleware.Auth(), handler.createNewPack)
-		admin.POST("/packs/:id/close", middleware.Auth(), handler.closePack)
+		admin.POST("/packs", middleware.Auth(), middleware.RequireAdmin(), handler.createNewPack)
+		admin.POST("/packs/:id/close", middleware.Auth(), middleware.RequireAdmin(), handler.closePack)
 	}
 
 	// Sample pack routes
@@ -66,7 +66,7 @@ func Init(r *gin.Engine, store storage.Storage, cfg *config.Config) {
 	{
 		packs.GET("", handler.listPacks)
 		packs.GET("/:id", handler.getPack)
-		packs.POST("/:id/upload", middleware.Auth(), handler.uploadSample)
+		packs.POST("/:id/upload", middleware.Auth(), middleware.ValidateFileUpload(), handler.uploadSample)
 		packs.GET("/:id/download", handler.downloadPack)
 	}
 
@@ -74,7 +74,7 @@ func Init(r *gin.Engine, store storage.Storage, cfg *config.Config) {
 	submissions := api.Group("/submissions")
 	{
 		submissions.GET("", middleware.Auth(), handler.listSubmissions)
-		submissions.POST("", middleware.Auth(), handler.createSubmission)
+		submissions.POST("", middleware.Auth(), middleware.ValidateFileUpload(), handler.createSubmission)
 		submissions.GET("/:id", middleware.Auth(), handler.getSubmission)
 		submissions.GET("/:id/download", middleware.Auth(), handler.downloadSubmission)
 	}
@@ -116,14 +116,14 @@ func (h *Handler) getPack(c *gin.Context) {
 }
 
 func (h *Handler) uploadSample(c *gin.Context) {
-	if !h.packService.IsUploadAllowed() {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Upload window is closed"})
-		return
-	}
-
 	packID, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid pack ID"})
+		return
+	}
+
+	if !h.packService.IsUploadAllowedForPack(uint(packID)) {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Upload window is closed"})
 		return
 	}
 
