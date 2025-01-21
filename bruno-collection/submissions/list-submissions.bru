@@ -1,0 +1,17 @@
+meta {
+  name: List Submissions
+  type: http
+}
+
+get {
+  url: {{base_url}}/api/submissions
+}
+
+query {
+  pack_id: {{pack_id}}
+  offset: 0
+}
+
+headers {
+  Authorization: Bearer {{auth_token}}
+} 

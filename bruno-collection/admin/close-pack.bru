@@ -1,0 +1,13 @@
+meta {
+  name: "Close Pack"
+  type: "http"
+  seq: 2
+}
+
+post {
+  url: "{{base_url}}/api/admin/packs/{{pack_id}}/close"
+}
+
+headers {
+  Authorization: "Bearer {{auth_token}}"
+} 

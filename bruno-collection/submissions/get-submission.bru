@@ -1,0 +1,13 @@
+meta {
+  name: "Get Submission"
+  type: "http"
+  seq: 3
+}
+
+get {
+  url: "{{base_url}}/api/submissions/{{submission_id}}"
+}
+
+headers {
+  Authorization: "Bearer {{auth_token}}"
+} 

@@ -1,0 +1,349 @@
+Running Folder Recursively 
+
+admin/create-pack (401 Unauthorized) - 14 ms
+[Function: AssertionError]
+AssertionError: expected 401 to equal 201
+    at VM2 Wrapper.apply (/opt/homebrew/lib/node_modules/@usebruno/cli/node_modules/@usebruno/vm2/lib/bridge.js:485:11)
+    at /Users/ianfundere/Projects/quixit.us/bruno-collection/vm.js:2:25
+    at VM2 Wrapper.apply (/opt/homebrew/lib/node_modules/@usebruno/cli/node_modules/@usebruno/vm2/lib/bridge.js:485:11)
+    at /opt/homebrew/lib/node_modules/@usebruno/cli/node_modules/@usebruno/js/src/test.js:3:11
+    at VM2 Wrapper.apply (/opt/homebrew/lib/node_modules/@usebruno/cli/node_modules/@usebruno/vm2/lib/bridge.js:485:11)
+    at module.exports (/Users/ianfundere/Projects/quixit.us/bruno-collection/vm.js:1:94)
+    at VM2 Wrapper.apply (/opt/homebrew/lib/node_modules/@usebruno/cli/node_modules/@usebruno/vm2/lib/bridge.js:485:11)
+    at TestRuntime.runTests (/opt/homebrew/lib/node_modules/@usebruno/cli/node_modules/@usebruno/js/src/runtime/test-runtime.js:217:13)
+    at runSingleRequest (/opt/homebrew/lib/node_modules/@usebruno/cli/src/runner/run-single-request.js:406:40)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async Object.handler (/opt/homebrew/lib/node_modules/@usebruno/cli/src/commands/run.js:778:24) {
+  showDiff: true,
+  actual: 401,
+  expected: 201,
+  operator: 'strictEqual'
+}
+[Function: AssertionError]
+AssertionError: expected { Object (error) } to have property 'ID'
+    at VM2 Wrapper.apply (/opt/homebrew/lib/node_modules/@usebruno/cli/node_modules/@usebruno/vm2/lib/bridge.js:485:11)
+    at /Users/ianfundere/Projects/quixit.us/bruno-collection/vm.js:6:28
+    at VM2 Wrapper.apply (/opt/homebrew/lib/node_modules/@usebruno/cli/node_modules/@usebruno/vm2/lib/bridge.js:485:11)
+    at /opt/homebrew/lib/node_modules/@usebruno/cli/node_modules/@usebruno/js/src/test.js:3:11
+    at VM2 Wrapper.apply (/opt/homebrew/lib/node_modules/@usebruno/cli/node_modules/@usebruno/vm2/lib/bridge.js:485:11)
+    at module.exports (/Users/ianfundere/Projects/quixit.us/bruno-collection/vm.js:5:1)
+    at VM2 Wrapper.apply (/opt/homebrew/lib/node_modules/@usebruno/cli/node_modules/@usebruno/vm2/lib/bridge.js:485:11)
+    at TestRuntime.runTests (/opt/homebrew/lib/node_modules/@usebruno/cli/node_modules/@usebruno/js/src/runtime/test-runtime.js:217:13)
+    at runSingleRequest (/opt/homebrew/lib/node_modules/@usebruno/cli/src/runner/run-single-request.js:406:40)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async Object.handler (/opt/homebrew/lib/node_modules/@usebruno/cli/src/commands/run.js:778:24) {
+  showDiff: false,
+  actual: { error: 'invalid authorization header' },
+  expected: undefined
+}
+[Function: AssertionError]
+AssertionError: expected undefined to equal true
+    at VM2 Wrapper.apply (/opt/homebrew/lib/node_modules/@usebruno/cli/node_modules/@usebruno/vm2/lib/bridge.js:485:11)
+    at /Users/ianfundere/Projects/quixit.us/bruno-collection/vm.js:17:32
+    at VM2 Wrapper.apply (/opt/homebrew/lib/node_modules/@usebruno/cli/node_modules/@usebruno/vm2/lib/bridge.js:485:11)
+    at /opt/homebrew/lib/node_modules/@usebruno/cli/node_modules/@usebruno/js/src/test.js:3:11
+    at VM2 Wrapper.apply (/opt/homebrew/lib/node_modules/@usebruno/cli/node_modules/@usebruno/vm2/lib/bridge.js:485:11)
+    at module.exports (/Users/ianfundere/Projects/quixit.us/bruno-collection/vm.js:16:1)
+    at VM2 Wrapper.apply (/opt/homebrew/lib/node_modules/@usebruno/cli/node_modules/@usebruno/vm2/lib/bridge.js:485:11)
+    at TestRuntime.runTests (/opt/homebrew/lib/node_modules/@usebruno/cli/node_modules/@usebruno/js/src/runtime/test-runtime.js:217:13)
+    at runSingleRequest (/opt/homebrew/lib/node_modules/@usebruno/cli/src/runner/run-single-request.js:406:40)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async Object.handler (/opt/homebrew/lib/node_modules/@usebruno/cli/src/commands/run.js:778:24) {
+  showDiff: true,
+  actual: undefined,
+  expected: true,
+  operator: 'strictEqual'
+}
+[Function: AssertionError]
+TypeError [Error]: Cannot read properties of undefined (reading 'title')
+    at /Users/ianfundere/Projects/quixit.us/bruno-collection/vm.js:21:44
+    at VM2 Wrapper.apply (/opt/homebrew/lib/node_modules/@usebruno/cli/node_modules/@usebruno/vm2/lib/bridge.js:485:11)
+    at /opt/homebrew/lib/node_modules/@usebruno/cli/node_modules/@usebruno/js/src/test.js:3:11
+    at VM2 Wrapper.apply (/opt/homebrew/lib/node_modules/@usebruno/cli/node_modules/@usebruno/vm2/lib/bridge.js:485:11)
+    at module.exports (/Users/ianfundere/Projects/quixit.us/bruno-collection/vm.js:20:1)
+    at VM2 Wrapper.apply (/opt/homebrew/lib/node_modules/@usebruno/cli/node_modules/@usebruno/vm2/lib/bridge.js:485:11)
+    at TestRuntime.runTests (/opt/homebrew/lib/node_modules/@usebruno/cli/node_modules/@usebruno/js/src/runtime/test-runtime.js:217:13)
+    at runSingleRequest (/opt/homebrew/lib/node_modules/@usebruno/cli/src/runner/run-single-request.js:406:40)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async Object.handler (/opt/homebrew/lib/node_modules/@usebruno/cli/src/commands/run.js:778:24)
+[Function: AssertionError]
+AssertionError: expected Invalid Date to be above 2025-01-20T22:08:24.875Z
+    at VM2 Wrapper.apply (/opt/homebrew/lib/node_modules/@usebruno/cli/node_modules/@usebruno/vm2/lib/bridge.js:485:11)
+    at /Users/ianfundere/Projects/quixit.us/bruno-collection/vm.js:27:48
+    at VM2 Wrapper.apply (/opt/homebrew/lib/node_modules/@usebruno/cli/node_modules/@usebruno/vm2/lib/bridge.js:485:11)
+    at /opt/homebrew/lib/node_modules/@usebruno/cli/node_modules/@usebruno/js/src/test.js:3:11
+    at VM2 Wrapper.apply (/opt/homebrew/lib/node_modules/@usebruno/cli/node_modules/@usebruno/vm2/lib/bridge.js:485:11)
+    at module.exports (/Users/ianfundere/Projects/quixit.us/bruno-collection/vm.js:25:1)
+    at VM2 Wrapper.apply (/opt/homebrew/lib/node_modules/@usebruno/cli/node_modules/@usebruno/vm2/lib/bridge.js:485:11)
+    at TestRuntime.runTests (/opt/homebrew/lib/node_modules/@usebruno/cli/node_modules/@usebruno/js/src/runtime/test-runtime.js:217:13)
+    at runSingleRequest (/opt/homebrew/lib/node_modules/@usebruno/cli/src/runner/run-single-request.js:406:40)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async Object.handler (/opt/homebrew/lib/node_modules/@usebruno/cli/src/commands/run.js:778:24) {
+  showDiff: true,
+  actual: Date {},
+  expected: Date {},
+  operator: 'strictEqual'
+}
+   ✕ should return 201 when pack is created
+   ✕ should return pack object with required fields
+   ✕ should set isActive to true
+   ✕ should match input data
+   ✕ should set future dates
+admin/close-pack (getaddrinfo ENOTFOUND "http)
+auth/current-user (401 Unauthorized) - 1 ms
+[Function: AssertionError]
+AssertionError: expected 401 to equal 200
+    at VM2 Wrapper.apply (/opt/homebrew/lib/node_modules/@usebruno/cli/node_modules/@usebruno/vm2/lib/bridge.js:485:11)
+    at /Users/ianfundere/Projects/quixit.us/bruno-collection/vm.js:2:25
+    at VM2 Wrapper.apply (/opt/homebrew/lib/node_modules/@usebruno/cli/node_modules/@usebruno/vm2/lib/bridge.js:485:11)
+    at /opt/homebrew/lib/node_modules/@usebruno/cli/node_modules/@usebruno/js/src/test.js:3:11
+    at VM2 Wrapper.apply (/opt/homebrew/lib/node_modules/@usebruno/cli/node_modules/@usebruno/vm2/lib/bridge.js:485:11)
+    at module.exports (/Users/ianfundere/Projects/quixit.us/bruno-collection/vm.js:1:94)
+    at VM2 Wrapper.apply (/opt/homebrew/lib/node_modules/@usebruno/cli/node_modules/@usebruno/vm2/lib/bridge.js:485:11)
+    at TestRuntime.runTests (/opt/homebrew/lib/node_modules/@usebruno/cli/node_modules/@usebruno/js/src/runtime/test-runtime.js:217:13)
+    at runSingleRequest (/opt/homebrew/lib/node_modules/@usebruno/cli/src/runner/run-single-request.js:406:40)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async Object.handler (/opt/homebrew/lib/node_modules/@usebruno/cli/src/commands/run.js:778:24) {
+  showDiff: true,
+  actual: 401,
+  expected: 200,
+  operator: 'strictEqual'
+}
+[Function: AssertionError]
+AssertionError: expected { Object (error) } to have property 'ID'
+    at VM2 Wrapper.apply (/opt/homebrew/lib/node_modules/@usebruno/cli/node_modules/@usebruno/vm2/lib/bridge.js:485:11)
+    at /Users/ianfundere/Projects/quixit.us/bruno-collection/vm.js:6:28
+    at VM2 Wrapper.apply (/opt/homebrew/lib/node_modules/@usebruno/cli/node_modules/@usebruno/vm2/lib/bridge.js:485:11)
+    at /opt/homebrew/lib/node_modules/@usebruno/cli/node_modules/@usebruno/js/src/test.js:3:11
+    at VM2 Wrapper.apply (/opt/homebrew/lib/node_modules/@usebruno/cli/node_modules/@usebruno/vm2/lib/bridge.js:485:11)
+    at module.exports (/Users/ianfundere/Projects/quixit.us/bruno-collection/vm.js:5:1)
+    at VM2 Wrapper.apply (/opt/homebrew/lib/node_modules/@usebruno/cli/node_modules/@usebruno/vm2/lib/bridge.js:485:11)
+    at TestRuntime.runTests (/opt/homebrew/lib/node_modules/@usebruno/cli/node_modules/@usebruno/js/src/runtime/test-runtime.js:217:13)
+    at runSingleRequest (/opt/homebrew/lib/node_modules/@usebruno/cli/src/runner/run-single-request.js:406:40)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async Object.handler (/opt/homebrew/lib/node_modules/@usebruno/cli/src/commands/run.js:778:24) {
+  showDiff: false,
+  actual: { error: 'invalid authorization header' },
+  expected: undefined
+}
+[Function: AssertionError]
+AssertionError: expected undefined to be a number
+    at VM2 Wrapper.apply (/opt/homebrew/lib/node_modules/@usebruno/cli/node_modules/@usebruno/vm2/lib/bridge.js:485:11)
+    at /Users/ianfundere/Projects/quixit.us/bruno-collection/vm.js:11:29
+    at VM2 Wrapper.apply (/opt/homebrew/lib/node_modules/@usebruno/cli/node_modules/@usebruno/vm2/lib/bridge.js:485:11)
+    at /opt/homebrew/lib/node_modules/@usebruno/cli/node_modules/@usebruno/js/src/test.js:3:11
+    at VM2 Wrapper.apply (/opt/homebrew/lib/node_modules/@usebruno/cli/node_modules/@usebruno/vm2/lib/bridge.js:485:11)
+    at module.exports (/Users/ianfundere/Projects/quixit.us/bruno-collection/vm.js:10:1)
+    at VM2 Wrapper.apply (/opt/homebrew/lib/node_modules/@usebruno/cli/node_modules/@usebruno/vm2/lib/bridge.js:485:11)
+    at TestRuntime.runTests (/opt/homebrew/lib/node_modules/@usebruno/cli/node_modules/@usebruno/js/src/runtime/test-runtime.js:217:13)
+    at runSingleRequest (/opt/homebrew/lib/node_modules/@usebruno/cli/src/runner/run-single-request.js:406:40)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async Object.handler (/opt/homebrew/lib/node_modules/@usebruno/cli/src/commands/run.js:778:24) {
+  showDiff: false,
+  actual: undefined,
+  expected: undefined,
+  operator: 'strictEqual'
+}
+[Function: AssertionError]
+TypeError [Error]: bru.request is not a function
+    at /Users/ianfundere/Projects/quixit.us/bruno-collection/vm.js:18:30
+    at VM2 Wrapper.apply (/opt/homebrew/lib/node_modules/@usebruno/cli/node_modules/@usebruno/vm2/lib/bridge.js:485:11)
+    at /opt/homebrew/lib/node_modules/@usebruno/cli/node_modules/@usebruno/js/src/test.js:3:11
+    at VM2 Wrapper.apply (/opt/homebrew/lib/node_modules/@usebruno/cli/node_modules/@usebruno/vm2/lib/bridge.js:485:11)
+    at module.exports (/Users/ianfundere/Projects/quixit.us/bruno-collection/vm.js:15:1)
+    at VM2 Wrapper.apply (/opt/homebrew/lib/node_modules/@usebruno/cli/node_modules/@usebruno/vm2/lib/bridge.js:485:11)
+    at TestRuntime.runTests (/opt/homebrew/lib/node_modules/@usebruno/cli/node_modules/@usebruno/js/src/runtime/test-runtime.js:217:13)
+    at runSingleRequest (/opt/homebrew/lib/node_modules/@usebruno/cli/src/runner/run-single-request.js:406:40)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async Object.handler (/opt/homebrew/lib/node_modules/@usebruno/cli/src/commands/run.js:778:24)
+   ✕ should return 200 when authenticated
+   ✕ should return user object with required fields
+   ✕ should return correct data types
+   ✕ should return 401 without auth token
+samples/list-packs (getaddrinfo ENOTFOUND "http)
+samples/upload-sample (401 Unauthorized) - 1 ms
+[Function: AssertionError]
+AssertionError: expected 401 to equal 200
+    at VM2 Wrapper.apply (/opt/homebrew/lib/node_modules/@usebruno/cli/node_modules/@usebruno/vm2/lib/bridge.js:485:11)
+    at /Users/ianfundere/Projects/quixit.us/bruno-collection/vm.js:2:25
+    at VM2 Wrapper.apply (/opt/homebrew/lib/node_modules/@usebruno/cli/node_modules/@usebruno/vm2/lib/bridge.js:485:11)
+    at /opt/homebrew/lib/node_modules/@usebruno/cli/node_modules/@usebruno/js/src/test.js:3:11
+    at VM2 Wrapper.apply (/opt/homebrew/lib/node_modules/@usebruno/cli/node_modules/@usebruno/vm2/lib/bridge.js:485:11)
+    at module.exports (/Users/ianfundere/Projects/quixit.us/bruno-collection/vm.js:1:94)
+    at VM2 Wrapper.apply (/opt/homebrew/lib/node_modules/@usebruno/cli/node_modules/@usebruno/vm2/lib/bridge.js:485:11)
+    at TestRuntime.runTests (/opt/homebrew/lib/node_modules/@usebruno/cli/node_modules/@usebruno/js/src/runtime/test-runtime.js:217:13)
+    at runSingleRequest (/opt/homebrew/lib/node_modules/@usebruno/cli/src/runner/run-single-request.js:406:40)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async Object.handler (/opt/homebrew/lib/node_modules/@usebruno/cli/src/commands/run.js:778:24) {
+  showDiff: true,
+  actual: 401,
+  expected: 200,
+  operator: 'strictEqual'
+}
+[Function: AssertionError]
+AssertionError: expected { Object (error) } to have property 'ID'
+    at VM2 Wrapper.apply (/opt/homebrew/lib/node_modules/@usebruno/cli/node_modules/@usebruno/vm2/lib/bridge.js:485:11)
+    at /Users/ianfundere/Projects/quixit.us/bruno-collection/vm.js:6:28
+    at VM2 Wrapper.apply (/opt/homebrew/lib/node_modules/@usebruno/cli/node_modules/@usebruno/vm2/lib/bridge.js:485:11)
+    at /opt/homebrew/lib/node_modules/@usebruno/cli/node_modules/@usebruno/js/src/test.js:3:11
+    at VM2 Wrapper.apply (/opt/homebrew/lib/node_modules/@usebruno/cli/node_modules/@usebruno/vm2/lib/bridge.js:485:11)
+    at module.exports (/Users/ianfundere/Projects/quixit.us/bruno-collection/vm.js:5:1)
+    at VM2 Wrapper.apply (/opt/homebrew/lib/node_modules/@usebruno/cli/node_modules/@usebruno/vm2/lib/bridge.js:485:11)
+    at TestRuntime.runTests (/opt/homebrew/lib/node_modules/@usebruno/cli/node_modules/@usebruno/js/src/runtime/test-runtime.js:217:13)
+    at runSingleRequest (/opt/homebrew/lib/node_modules/@usebruno/cli/src/runner/run-single-request.js:406:40)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async Object.handler (/opt/homebrew/lib/node_modules/@usebruno/cli/src/commands/run.js:778:24) {
+  showDiff: false,
+  actual: { error: 'invalid authorization header' },
+  expected: undefined
+}
+[Function: AssertionError]
+AssertionError: expected undefined to equal 'sample.wav'
+    at VM2 Wrapper.apply (/opt/homebrew/lib/node_modules/@usebruno/cli/node_modules/@usebruno/vm2/lib/bridge.js:485:11)
+    at /Users/ianfundere/Projects/quixit.us/bruno-collection/vm.js:15:32
+    at VM2 Wrapper.apply (/opt/homebrew/lib/node_modules/@usebruno/cli/node_modules/@usebruno/vm2/lib/bridge.js:485:11)
+    at /opt/homebrew/lib/node_modules/@usebruno/cli/node_modules/@usebruno/js/src/test.js:3:11
+    at VM2 Wrapper.apply (/opt/homebrew/lib/node_modules/@usebruno/cli/node_modules/@usebruno/vm2/lib/bridge.js:485:11)
+    at module.exports (/Users/ianfundere/Projects/quixit.us/bruno-collection/vm.js:14:1)
+    at VM2 Wrapper.apply (/opt/homebrew/lib/node_modules/@usebruno/cli/node_modules/@usebruno/vm2/lib/bridge.js:485:11)
+    at TestRuntime.runTests (/opt/homebrew/lib/node_modules/@usebruno/cli/node_modules/@usebruno/js/src/runtime/test-runtime.js:217:13)
+    at runSingleRequest (/opt/homebrew/lib/node_modules/@usebruno/cli/src/runner/run-single-request.js:406:40)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async Object.handler (/opt/homebrew/lib/node_modules/@usebruno/cli/src/commands/run.js:778:24) {
+  showDiff: true,
+  actual: undefined,
+  expected: 'sample.wav',
+  operator: 'strictEqual'
+}
+[Function: AssertionError]
+AssertionError: expected undefined to equal 1
+    at VM2 Wrapper.apply (/opt/homebrew/lib/node_modules/@usebruno/cli/node_modules/@usebruno/vm2/lib/bridge.js:485:11)
+    at /Users/ianfundere/Projects/quixit.us/bruno-collection/vm.js:20:36
+    at VM2 Wrapper.apply (/opt/homebrew/lib/node_modules/@usebruno/cli/node_modules/@usebruno/vm2/lib/bridge.js:485:11)
+    at /opt/homebrew/lib/node_modules/@usebruno/cli/node_modules/@usebruno/js/src/test.js:3:11
+    at VM2 Wrapper.apply (/opt/homebrew/lib/node_modules/@usebruno/cli/node_modules/@usebruno/vm2/lib/bridge.js:485:11)
+    at module.exports (/Users/ianfundere/Projects/quixit.us/bruno-collection/vm.js:19:1)
+    at VM2 Wrapper.apply (/opt/homebrew/lib/node_modules/@usebruno/cli/node_modules/@usebruno/vm2/lib/bridge.js:485:11)
+    at TestRuntime.runTests (/opt/homebrew/lib/node_modules/@usebruno/cli/node_modules/@usebruno/js/src/runtime/test-runtime.js:217:13)
+    at runSingleRequest (/opt/homebrew/lib/node_modules/@usebruno/cli/src/runner/run-single-request.js:406:40)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async Object.handler (/opt/homebrew/lib/node_modules/@usebruno/cli/src/commands/run.js:778:24) {
+  showDiff: true,
+  actual: undefined,
+  expected: 1,
+  operator: 'strictEqual'
+}
+[Function: AssertionError]
+TypeError [Error]: bru.request is not a function
+    at /Users/ianfundere/Projects/quixit.us/bruno-collection/vm.js:26:30
+    at VM2 Wrapper.apply (/opt/homebrew/lib/node_modules/@usebruno/cli/node_modules/@usebruno/vm2/lib/bridge.js:485:11)
+    at /opt/homebrew/lib/node_modules/@usebruno/cli/node_modules/@usebruno/js/src/test.js:3:11
+    at VM2 Wrapper.apply (/opt/homebrew/lib/node_modules/@usebruno/cli/node_modules/@usebruno/vm2/lib/bridge.js:485:11)
+    at module.exports (/Users/ianfundere/Projects/quixit.us/bruno-collection/vm.js:23:1)
+    at VM2 Wrapper.apply (/opt/homebrew/lib/node_modules/@usebruno/cli/node_modules/@usebruno/vm2/lib/bridge.js:485:11)
+    at TestRuntime.runTests (/opt/homebrew/lib/node_modules/@usebruno/cli/node_modules/@usebruno/js/src/runtime/test-runtime.js:217:13)
+    at runSingleRequest (/opt/homebrew/lib/node_modules/@usebruno/cli/src/runner/run-single-request.js:406:40)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async Object.handler (/opt/homebrew/lib/node_modules/@usebruno/cli/src/commands/run.js:778:24)
+   ✕ should return 200 when sample is uploaded
+   ✕ should return sample object with required fields
+   ✕ should have correct file information
+   ✕ should be associated with correct pack
+   ✕ should return 401 without auth token
+samples/get-pack (getaddrinfo ENOTFOUND "http)
+samples/download-pack (getaddrinfo ENOTFOUND "http)
+submissions/create-submission (401 Unauthorized) - 1 ms
+[Function: AssertionError]
+AssertionError: expected 401 to equal 201
+    at VM2 Wrapper.apply (/opt/homebrew/lib/node_modules/@usebruno/cli/node_modules/@usebruno/vm2/lib/bridge.js:485:11)
+    at /Users/ianfundere/Projects/quixit.us/bruno-collection/vm.js:2:25
+    at VM2 Wrapper.apply (/opt/homebrew/lib/node_modules/@usebruno/cli/node_modules/@usebruno/vm2/lib/bridge.js:485:11)
+    at /opt/homebrew/lib/node_modules/@usebruno/cli/node_modules/@usebruno/js/src/test.js:3:11
+    at VM2 Wrapper.apply (/opt/homebrew/lib/node_modules/@usebruno/cli/node_modules/@usebruno/vm2/lib/bridge.js:485:11)
+    at module.exports (/Users/ianfundere/Projects/quixit.us/bruno-collection/vm.js:1:94)
+    at VM2 Wrapper.apply (/opt/homebrew/lib/node_modules/@usebruno/cli/node_modules/@usebruno/vm2/lib/bridge.js:485:11)
+    at TestRuntime.runTests (/opt/homebrew/lib/node_modules/@usebruno/cli/node_modules/@usebruno/js/src/runtime/test-runtime.js:217:13)
+    at runSingleRequest (/opt/homebrew/lib/node_modules/@usebruno/cli/src/runner/run-single-request.js:406:40)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async Object.handler (/opt/homebrew/lib/node_modules/@usebruno/cli/src/commands/run.js:778:24) {
+  showDiff: true,
+  actual: 401,
+  expected: 201,
+  operator: 'strictEqual'
+}
+[Function: AssertionError]
+AssertionError: expected { Object (error) } to have property 'ID'
+    at VM2 Wrapper.apply (/opt/homebrew/lib/node_modules/@usebruno/cli/node_modules/@usebruno/vm2/lib/bridge.js:485:11)
+    at /Users/ianfundere/Projects/quixit.us/bruno-collection/vm.js:6:28
+    at VM2 Wrapper.apply (/opt/homebrew/lib/node_modules/@usebruno/cli/node_modules/@usebruno/vm2/lib/bridge.js:485:11)
+    at /opt/homebrew/lib/node_modules/@usebruno/cli/node_modules/@usebruno/js/src/test.js:3:11
+    at VM2 Wrapper.apply (/opt/homebrew/lib/node_modules/@usebruno/cli/node_modules/@usebruno/vm2/lib/bridge.js:485:11)
+    at module.exports (/Users/ianfundere/Projects/quixit.us/bruno-collection/vm.js:5:1)
+    at VM2 Wrapper.apply (/opt/homebrew/lib/node_modules/@usebruno/cli/node_modules/@usebruno/vm2/lib/bridge.js:485:11)
+    at TestRuntime.runTests (/opt/homebrew/lib/node_modules/@usebruno/cli/node_modules/@usebruno/js/src/runtime/test-runtime.js:217:13)
+    at runSingleRequest (/opt/homebrew/lib/node_modules/@usebruno/cli/src/runner/run-single-request.js:406:40)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async Object.handler (/opt/homebrew/lib/node_modules/@usebruno/cli/src/commands/run.js:778:24) {
+  showDiff: false,
+  actual: { error: 'invalid authorization header' },
+  expected: undefined
+}
+[Function: AssertionError]
+TypeError [Error]: Cannot read properties of undefined (reading 'title')
+    at /Users/ianfundere/Projects/quixit.us/bruno-collection/vm.js:17:44
+    at VM2 Wrapper.apply (/opt/homebrew/lib/node_modules/@usebruno/cli/node_modules/@usebruno/vm2/lib/bridge.js:485:11)
+    at /opt/homebrew/lib/node_modules/@usebruno/cli/node_modules/@usebruno/js/src/test.js:3:11
+    at VM2 Wrapper.apply (/opt/homebrew/lib/node_modules/@usebruno/cli/node_modules/@usebruno/vm2/lib/bridge.js:485:11)
+    at module.exports (/Users/ianfundere/Projects/quixit.us/bruno-collection/vm.js:16:1)
+    at VM2 Wrapper.apply (/opt/homebrew/lib/node_modules/@usebruno/cli/node_modules/@usebruno/vm2/lib/bridge.js:485:11)
+    at TestRuntime.runTests (/opt/homebrew/lib/node_modules/@usebruno/cli/node_modules/@usebruno/js/src/runtime/test-runtime.js:217:13)
+    at runSingleRequest (/opt/homebrew/lib/node_modules/@usebruno/cli/src/runner/run-single-request.js:406:40)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async Object.handler (/opt/homebrew/lib/node_modules/@usebruno/cli/src/commands/run.js:778:24)
+[Function: AssertionError]
+AssertionError: expected Invalid Date to be at most 2025-01-20T22:08:24.908Z
+    at VM2 Wrapper.apply (/opt/homebrew/lib/node_modules/@usebruno/cli/node_modules/@usebruno/vm2/lib/bridge.js:485:11)
+    at /Users/ianfundere/Projects/quixit.us/bruno-collection/vm.js:26:32
+    at VM2 Wrapper.apply (/opt/homebrew/lib/node_modules/@usebruno/cli/node_modules/@usebruno/vm2/lib/bridge.js:485:11)
+    at /opt/homebrew/lib/node_modules/@usebruno/cli/node_modules/@usebruno/js/src/test.js:3:11
+    at VM2 Wrapper.apply (/opt/homebrew/lib/node_modules/@usebruno/cli/node_modules/@usebruno/vm2/lib/bridge.js:485:11)
+    at module.exports (/Users/ianfundere/Projects/quixit.us/bruno-collection/vm.js:23:1)
+    at VM2 Wrapper.apply (/opt/homebrew/lib/node_modules/@usebruno/cli/node_modules/@usebruno/vm2/lib/bridge.js:485:11)
+    at TestRuntime.runTests (/opt/homebrew/lib/node_modules/@usebruno/cli/node_modules/@usebruno/js/src/runtime/test-runtime.js:217:13)
+    at runSingleRequest (/opt/homebrew/lib/node_modules/@usebruno/cli/src/runner/run-single-request.js:406:40)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async Object.handler (/opt/homebrew/lib/node_modules/@usebruno/cli/src/commands/run.js:778:24) {
+  showDiff: true,
+  actual: Date {},
+  expected: Date {},
+  operator: 'strictEqual'
+}
+[Function: AssertionError]
+TypeError [Error]: bru.request is not a function
+    at /Users/ianfundere/Projects/quixit.us/bruno-collection/vm.js:33:30
+    at VM2 Wrapper.apply (/opt/homebrew/lib/node_modules/@usebruno/cli/node_modules/@usebruno/vm2/lib/bridge.js:485:11)
+    at /opt/homebrew/lib/node_modules/@usebruno/cli/node_modules/@usebruno/js/src/test.js:3:11
+    at VM2 Wrapper.apply (/opt/homebrew/lib/node_modules/@usebruno/cli/node_modules/@usebruno/vm2/lib/bridge.js:485:11)
+    at module.exports (/Users/ianfundere/Projects/quixit.us/bruno-collection/vm.js:30:1)
+    at VM2 Wrapper.apply (/opt/homebrew/lib/node_modules/@usebruno/cli/node_modules/@usebruno/vm2/lib/bridge.js:485:11)
+    at TestRuntime.runTests (/opt/homebrew/lib/node_modules/@usebruno/cli/node_modules/@usebruno/js/src/runtime/test-runtime.js:217:13)
+    at runSingleRequest (/opt/homebrew/lib/node_modules/@usebruno/cli/src/runner/run-single-request.js:406:40)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async Object.handler (/opt/homebrew/lib/node_modules/@usebruno/cli/src/commands/run.js:778:24)
+   ✕ should return 201 when submission is created
+   ✕ should return submission object with required fields
+   ✕ should have correct submission information
+   ✕ should have valid submission time
+   ✕ should return 401 without auth token
+submissions/list-submissions (401 Unauthorized) - 1 ms
+submissions/get-submission (getaddrinfo ENOTFOUND "http)
+submissions/download-submission (getaddrinfo ENOTFOUND "http)
+
+Requests:    5 passed, 6 failed, 11 total
+Tests:       0 passed, 19 failed, 19 total
+Assertions:  0 passed, 0 total
+Ran all requests - 18 ms
+
+Requests:    5 passed, 6 failed, 11 total
+Tests:       0 passed, 19 failed, 19 total
+Assertions:  0 passed, 0 total

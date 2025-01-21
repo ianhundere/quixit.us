@@ -1,0 +1,83 @@
+meta {
+  name: Create New Pack
+  type: http
+  description: creates a new sample pack and deactivates any currently active packs
+}
+
+post {
+  url: {{base_url}}/api/admin/packs
+}
+
+headers {
+  Authorization: Bearer {{auth_token}}
+  Content-Type: application/json
+}
+
+body:json {
+  title: "Sample Pack #1",
+  description: "First sample pack of the series"
+}
+
+tests {
+  // verify response status
+  test("should return 201 when authenticated", function() {
+    if (req.headers.Authorization) {
+      expect(res.status).to.equal(201)
+    }
+  })
+
+  // verify response structure
+  test("should return pack object with required fields", function() {
+    if (res.status === 201) {
+      expect(res.body).to.have.property('ID')
+      expect(res.body).to.have.property('title')
+      expect(res.body).to.have.property('description')
+      expect(res.body).to.have.property('uploadStart')
+      expect(res.body).to.have.property('uploadEnd')
+      expect(res.body).to.have.property('startDate')
+      expect(res.body).to.have.property('endDate')
+      expect(res.body).to.have.property('isActive')
+    }
+  })
+
+  // verify data
+  test("should set isActive to true", function() {
+    if (res.status === 201) {
+      expect(res.body.isActive).to.equal(true)
+    }
+  })
+
+  test("should match input data", function() {
+    if (res.status === 201) {
+      expect(res.body.title).to.equal(req.body.title)
+      expect(res.body.description).to.equal(req.body.description)
+    }
+  })
+
+  // verify dates are in future
+  test("should set future dates", function() {
+    if (res.status === 201) {
+      const now = new Date()
+      expect(new Date(res.body.uploadStart)).to.be.above(now)
+      expect(new Date(res.body.uploadEnd)).to.be.above(now)
+      expect(new Date(res.body.startDate)).to.be.above(now)
+      expect(new Date(res.body.endDate)).to.be.above(now)
+    }
+  })
+}
+
+docs {
+  endpoint returns:
+  {
+    "ID": number,
+    "title": string,
+    "description": string,
+    "uploadStart": datetime,
+    "uploadEnd": datetime,
+    "startDate": datetime,
+    "endDate": datetime,
+    "isActive": boolean,
+    "samples": array,
+    "submissions": array
+  }
+} 

@@ -1,0 +1,13 @@
+meta {
+  name: "Download Submission"
+  type: "http"
+  seq: 4
+}
+
+get {
+  url: "{{base_url}}/api/submissions/{{submission_id}}/download"
+}
+
+headers {
+  Authorization: "Bearer {{auth_token}}"
+} 
