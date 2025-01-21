@@ -28,9 +28,9 @@
       <div v-if="isUploadAllowed" class="mt-8">
         <SampleUpload 
           :pack-id="Number(getId(pack))"
-          :upload-start="pack.uploadStart"
-          :upload-end="pack.uploadEnd"
-          :samples="samples"
+          :upload-start="pack?.uploadStart ?? ''"
+          :upload-end="pack?.uploadEnd ?? ''"
+          :samples="mappedSamples"
           @upload-complete="refreshPack"
         />
       </div>
@@ -45,9 +45,9 @@
                 <p class="font-medium">{{ sample.filename }}</p>
                 <p class="text-sm text-gray-600">
                   Uploaded by {{ getUserDisplay(sample.user) }}
-                  {{ sample.user?.ID === currentUser.value?.ID ? '(You)' : '' }}
+                  {{ sample.user?.ID === currentUser?.ID ? '(You)' : '' }}
                 </p>
-                <p class="text-sm text-gray-500">{{ formatFileSize(sample.fileSize) }}</p>
+                <p class="text-sm text-gray-500">{{ formatFileSize(0) }}</p>
               </div>
             </div>
           </div>
@@ -226,6 +226,11 @@ const refreshPack = async () => {
 // Add reactive refs for samples
 const samples = computed(() => pack.value?.samples || [])
 const sampleCount = computed(() => samples.value.length)
+
+const mappedSamples = computed(() => samples.value.map(s => ({
+  ...s,
+  fileSize: 0 // default value since we don't have actual file size
+})))
 
 onMounted(async () => {
   const packId = parseInt(route.params.id as string)

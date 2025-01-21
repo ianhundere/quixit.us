@@ -251,9 +251,13 @@ const submitTrack = async () => {
     const formData = new FormData()
     formData.append('file', selectedFile.value)
     formData.append('title', trackTitle.value.trim())
-    formData.append('pack_id', currentPack.value.ID.toString())
+    formData.append('sample_pack_id', currentPack.value.ID.toString())
     
-    await api.post('/api/submissions', formData)
+    await api.post('/submissions', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    })
     
     // Reset form
     trackTitle.value = ''

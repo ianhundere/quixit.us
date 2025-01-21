@@ -42,7 +42,9 @@ export const packs = {
       }
     });
   },
-  download: (id: number) => api.get(`/samples/packs/${id}/download`)
+  download: (id: number) => api.get(`/samples/packs/${id}/download`, {
+    responseType: 'blob'
+  })
 }
 
 export const submissions = {
