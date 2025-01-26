@@ -86,7 +86,7 @@ const setAudioSource = async (sample: Sample) => {
     }
   } catch (error) {
     console.error('Failed to load audio:', error)
-    emit('error', error instanceof Error ? error.message : 'Failed to load audio')
+    emit('error', 'Failed to load audio')
     emit('playbackEnded')
   } finally {
     isLoading.value = false

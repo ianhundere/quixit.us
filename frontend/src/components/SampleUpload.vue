@@ -69,7 +69,7 @@
     <p v-else-if="remainingUploads <= 0" class="text-amber-600">
       You have reached the maximum number of uploads for this pack.
     </p>
-    <p v-if="error" class="mt-2 text-red-600">{{ error }}</p>
+    <p v-if="error" class="mt-2 text-red-600" data-test="error-message">{{ error }}</p>
     <p v-if="successMessage" class="mt-2 text-green-600">{{ successMessage }}</p>
   </div>
   <div v-else>

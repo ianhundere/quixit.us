@@ -1,3 +1,5 @@
+import type { SamplePack, Sample, User, Submission } from './types'
+
 export interface SamplePack {
     ID: number;
     title: string;

@@ -7,4 +7,4 @@ export async function downloadFile(url: string): Promise<Blob> {
     })
     if (!response.ok) throw new Error('Download failed')
     return response.blob()
-} 
+}
