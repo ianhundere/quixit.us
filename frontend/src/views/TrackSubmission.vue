@@ -46,9 +46,16 @@
             <input 
               v-model="trackTitle" 
               type="text"
-              class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+              :class="[
+                'mt-1 block w-full rounded-md shadow-sm focus:ring-blue-500',
+                showTitleError ? 'border-red-300 focus:border-red-500' : 'border-gray-300 focus:border-blue-500'
+              ]"
               placeholder="Enter your track title"
+              @input="() => showTitleError = false"
             />
+            <p v-if="showTitleError" class="mt-1 text-sm text-red-600">
+              Please add a track title to complete your submission
+            </p>
           </div>
           
           <div>
@@ -140,6 +147,7 @@ const submitSuccess = ref<string | null>(null)
 const trackTitle = ref('')
 const selectedFile = ref<File | null>(null)
 const fileInput = ref<HTMLInputElement | null>(null)
+const showTitleError = ref(false)
 
 // Compute window status
 const isSubmissionAllowed = computed(() => {
@@ -211,6 +219,9 @@ const handleFileSelect = (event: Event) => {
   const input = event.target as HTMLInputElement
   if (input.files && input.files.length > 0) {
     selectedFile.value = input.files[0]
+    if (!trackTitle.value.trim()) {
+      showTitleError.value = true
+    }
   }
 }
 
@@ -241,7 +252,14 @@ const downloadPack = async () => {
 }
 
 const submitTrack = async () => {
-  if (!selectedFile.value || !trackTitle.value.trim()) return
+  if (!selectedFile.value || !trackTitle.value.trim()) {
+    if (!trackTitle.value.trim()) {
+      showTitleError.value = true
+    }
+    return
+  }
+  
+  showTitleError.value = false
   
   try {
     submitting.value = true
