@@ -1,11 +1,14 @@
-.PHONY: build build-frontend build-backend test clean db-up db-down db-reset reset frontend backend dev install setup-dev
+.PHONY: all dev frontend backend install setup-dev build build-frontend build-backend docker-build docker-dev db-up db-down db-reset clean reset test help
 
-# This is the default target that runs when you just type 'make'
-# It explicitly sets 'dev' as the default goal
+# Default goal
 .DEFAULT_GOAL := dev
 
-# Development
+# Main targets
+all: dev
+
+# Development targets
 dev: db-up
+	@echo "starting development environment..."
 	@make -j2 frontend backend
 
 frontend:
@@ -14,41 +17,61 @@ frontend:
 backend:
 	go run ./backend/main.go
 
+# Docker targets
+docker-build: build-frontend
+	@echo "building docker image..."
+	docker-compose build
+
+docker-dev: db-up
+	@echo "starting docker development environment..."
+	docker-compose up -d quixit
+	@echo "docker development environment is running"
+	@echo "backend and frontend available at: http://localhost:8080"
+
 # Installation and setup
 install:
+	@echo "installing dependencies..."
 	cd frontend && npm install
 	go mod download
 
 setup-dev: install
+	@echo "setting up development environment..."
 	mkdir -p storage
 	make db-up
 	go run ./backend/testdata/cmd/setup_cmd.go
 
-# Production build
+# Build targets
 build: build-frontend build-backend
 
 build-frontend:
-	cd frontend && npm run build
+	@echo "building frontend..."
+	cd frontend && npm run build-no-types
 
 build-backend:
+	@echo "building backend..."
 	go build -o bin/server ./backend/main.go
 
 # Database operations
 db-up:
-	docker-compose up -d
+	@echo "starting database..."
+	docker-compose up -d postgres
 	@until docker-compose ps postgres | grep -q "healthy"; do sleep 1; done
+	@echo "database is ready"
 
 db-down:
+	@echo "stopping database..."
 	docker-compose down
 
 db-reset:
+	@echo "resetting database..."
 	docker-compose down -v
-	docker-compose up -d
+	docker-compose up -d postgres
 	@until docker-compose ps postgres | grep -q "healthy"; do sleep 1; done
+	@echo "database has been reset"
 
 # Cleanup
 clean:
-	@echo "Cleaning up..."
+	@echo "cleaning up..."
 	rm -rf bin/
 	rm -rf storage/
 	rm -rf frontend/dist/
@@ -59,20 +82,25 @@ reset: clean db-reset setup-dev
 
 # Run tests
 test:
+	@echo "running tests..."
 	go test -v ./...
 	cd frontend && npm test
 
 # Help
 help:
-	@echo "Usage:"
-	@echo "  dev         - Start all components (frontend, backend, db)"
-	@echo "  frontend    - Start frontend only"
-	@echo "  backend     - Start backend only"
-	@echo "  install     - Install dependencies"
-	@echo "  setup-dev   - Setup dev environment"
-	@echo "  build       - Production build"
-	@echo "  test        - Run tests"
-	@echo "  clean       - Cleanup"
-	@echo "  db-up       - Start database"
-	@echo "  db-down     - Stop database"
-	@echo "  db-reset    - Reset database"
+	@echo "quixit development commands:"
+	@echo "  make              - default target, same as 'make dev'"
+	@echo "  make dev          - start local development (backend, frontend, db)"
+	@echo "  make frontend     - start only the frontend dev server"
+	@echo "  make backend      - start only the backend server"
+	@echo "  make docker-build - build the frontend and create a docker image"
+	@echo "  make docker-dev   - run the application in docker containers"
+	@echo "  make install      - install all dependencies"
+	@echo "  make setup-dev    - set up the development environment"
+	@echo "  make build        - build the application for production"
+	@echo "  make test         - run all tests"
+	@echo "  make clean        - clean all build artifacts"
+	@echo "  make db-up        - start the database"
+	@echo "  make db-down      - stop the database"
+	@echo "  make db-reset     - reset the database"
+	@echo "  make reset        - clean, reset db, and set up dev environment"

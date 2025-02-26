@@ -79,3 +79,8 @@ storage/
 **/track.mp3
 bruno-collection/test_*
 **/tmp/test_*
+
+# env vars
+.env.docker
+.env.prod
+.env.dev

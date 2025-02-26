@@ -6,9 +6,13 @@
     "scripts": {
         "dev": "vite",
         "build": "vue-tsc -b && vite build",
+        "build-no-types": "vite build",
         "preview": "vite preview",
         "test": "vitest",
         "coverage": "vitest run --coverage"
+    },
+    "optionalDependencies": {
+        "@rollup/rollup-linux-x64-gnu": "4.9.5"
     },
     "dependencies": {
         "@headlessui/vue": "^1.7.19",

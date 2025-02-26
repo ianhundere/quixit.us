@@ -47,10 +47,10 @@ func LoadConfig() *Config {
 
 	cfg := &Config{
 		Port:              getEnv("PORT", "8080"),
-		Mode:              getEnv("GIN_MODE", "debug"),
-		DevMode:           true, // Always true for testing
-		BypassTimeWindows: true, // Always true for testing
-		BypassOAuth:       true, // Always true for testing
+		Mode:              getEnv("GIN_MODE", "release"),
+		DevMode:           getEnv("DEV_MODE", "false") == "true",
+		BypassTimeWindows: getEnv("BYPASS_TIME_WINDOWS", "false") == "true",
+		BypassOAuth:       getEnv("BYPASS_OAUTH", "false") == "true",
 		JWTSecret:         getEnv("JWT_SECRET", "your-super-secret-jwt-key-here"),
 		AccessDuration:    getEnvDuration("JWT_ACCESS_DURATION", 15*time.Minute),
 		RefreshDuration:   getEnvDuration("JWT_REFRESH_DURATION", 168*time.Hour),

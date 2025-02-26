@@ -2,6 +2,8 @@ package main
 
 import (
 	"log"
+	"net/http"
+	"time"
 
 	"sample-exchange/backend/api"
 	"sample-exchange/backend/auth/oauth"
@@ -30,6 +32,10 @@ func main() {
 
 	// Setup CORS
 	r.Use(middleware.CORS())
+
+	// Serve static files
+	r.Static("/assets", "./frontend/dist/assets")
+	r.StaticFile("/favicon.ico", "./frontend/dist/favicon.ico")
 
 	// Initialize OAuth providers
 	providers := map[string]oauth.Provider{
@@ -72,6 +78,19 @@ func main() {
 
 	// Initialize other API routes
 	api.Init(r, store, cfg)
+
+	// Health check endpoint that matches the one in the K8s config
+	r.GET("/api/v1/health", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{
+			"status":    "ok",
+			"timestamp": time.Now().Format(time.RFC3339),
+		})
+	})
+
+	// SPA fallback route
+	r.NoRoute(func(c *gin.Context) {
+		c.File("./frontend/dist/index.html")
+	})
 
 	// Start server
 	log.Printf("Starting server on :%s", cfg.Port)
