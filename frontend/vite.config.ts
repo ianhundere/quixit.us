@@ -6,17 +6,18 @@ import path from 'path';
 export default defineConfig(({ mode }) => {
     // Load env from root directory
     const rootEnv = loadEnv(mode, path.resolve(__dirname, '..'), '');
-    console.log('Environment loaded:', {
-        mode,
-        cwd: process.cwd(),
-        rootDir: path.resolve(__dirname, '..'),
-        DEV_BYPASS_TIME_WINDOWS: rootEnv.VITE_DEV_BYPASS_TIME_WINDOWS,
-        raw: rootEnv
-    });
-
-    const bypassTimeWindows = rootEnv.VITE_DEV_BYPASS_TIME_WINDOWS === 'true';
-    console.log('Bypass time windows:', bypassTimeWindows);
-
+    const isProd = mode === 'production';
+    
+    // Determine host and port for API URL
+    const hostDomain = isProd ? 'quixit.us' : (rootEnv.HOST_DOMAIN || 'localhost');
+    const hostPort = isProd ? '' : `:${rootEnv.HOST_PORT || '3000'}`;
+    const protocol = isProd ? 'https' : 'http';
+    
+    // In production, we don't include the port in the URL
+    const apiUrl = isProd 
+        ? `https://quixit.us/api`
+        : `http://${hostDomain}${hostPort}/api`;
+    
     return {
         plugins: [vue()],
         resolve: {
@@ -25,19 +26,20 @@ export default defineConfig(({ mode }) => {
             },
         },
         server: {
-            port: 3000,
-            host: rootEnv.HOST_DOMAIN || 'localhost',
-            proxy: {
+            port: parseInt(rootEnv.HOST_PORT || '3000'),
+            host: hostDomain,
+            proxy: isProd ? {} : {
                 '/api': {
-                    target: 'http://localhost:8080',
+                    target: `http://${hostDomain}${hostPort}`,
                     changeOrigin: true,
                     rewrite: (path) => path.replace(/^\/api/, '/api'),
                 },
             },
         },
         define: {
-            'window.__DEV_BYPASS_TIME_WINDOWS__': bypassTimeWindows,
-            'globalThis.__DEV_BYPASS_TIME_WINDOWS__': bypassTimeWindows
+            'window.__DEV_BYPASS_TIME_WINDOWS__': false,
+            'globalThis.__DEV_BYPASS_TIME_WINDOWS__': false,
+            'import.meta.env.VITE_API_URL': JSON.stringify(apiUrl)
         }
     };
 });

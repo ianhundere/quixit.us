@@ -9,7 +9,7 @@ all: dev
 # Development targets
 dev: db-up
 	@echo "starting development environment..."
-	@make -j2 frontend backend
+	@source .env.dev && make -j2 frontend backend
 
 frontend:
 	cd frontend && npm run dev
@@ -20,13 +20,15 @@ backend:
 # Docker targets
 docker-build: build-frontend
 	@echo "building docker image..."
-	docker-compose build
+	@source .env.docker && docker-compose build
 
 docker-dev: db-up
 	@echo "starting docker development environment..."
-	docker-compose up -d quixit
+	@echo "building docker image (which now includes frontend build)..."
+	@source .env.docker && docker-compose build
+	@source .env.docker && docker-compose up -d quixit
 	@echo "docker development environment is running"
-	@echo "backend and frontend available at: http://localhost:8080"
+	@echo "application is available at: http://$${HOST_DOMAIN}:3000"
 
 # Installation and setup
 install:
@@ -54,7 +56,7 @@ build-backend:
 # Database operations
 db-up:
 	@echo "starting database..."
-	docker-compose up -d postgres
+	@source .env.docker && docker-compose up -d postgres
 	@until docker-compose ps postgres | grep -q "healthy"; do sleep 1; done
 	@echo "database is ready"
 
@@ -65,7 +67,7 @@ db-down:
 db-reset:
 	@echo "resetting database..."
 	docker-compose down -v
-	docker-compose up -d postgres
+	@source .env.docker && docker-compose up -d postgres
 	@until docker-compose ps postgres | grep -q "healthy"; do sleep 1; done
 	@echo "database has been reset"
 

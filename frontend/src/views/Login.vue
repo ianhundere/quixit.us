@@ -58,7 +58,10 @@
 
 <script setup lang="ts">
 const isDev = import.meta.env.DEV
-const baseUrl = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:8080'
+// Get base URL from VITE_API_URL, removing /api at the end if present
+// Example: If VITE_API_URL is https://quixit.us/api, baseUrl will be https://quixit.us
+const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api'
+const baseUrl = apiUrl.endsWith('/api') ? apiUrl.slice(0, -4) : apiUrl
 
 function loginWithProvider(provider: string) {
   window.location.href = `${baseUrl}/api/auth/oauth/${provider}`

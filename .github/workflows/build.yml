@@ -51,6 +51,10 @@ jobs:
         
       - name: Build frontend
         run: make build-frontend
+        env:
+          HOST_DOMAIN: quixit.us
+          HOST_PORT: 3000
+          BYPASS_TIME_WINDOWS: false
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -83,6 +87,10 @@ jobs:
           file: ./Dockerfile
           platforms: linux/amd64,linux/arm64
           push: true
+          build-args: |
+            HOST_DOMAIN=quixit.us
+            HOST_PORT=3000
+            BYPASS_TIME_WINDOWS=false
           cache-from: |
             type=gha
             type=local,src=/tmp/.buildx-cache

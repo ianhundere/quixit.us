@@ -1,17 +1,60 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { api } from '@/api'
 
 const router = useRouter()
 const auth = useAuthStore()
+const currentPack = ref<any>(null)
+const loading = ref(true)
 
 const isAuthenticated = computed(() => !!auth.user)
 const isLoginPage = computed(() => router.currentRoute.value.path === '/login')
 
+// determine if we're in the sample upload phase or track submission phase
+const isInUploadPhase = computed(() => {
+  if (!currentPack.value) return false
+  if ((globalThis as any).__DEV_BYPASS_TIME_WINDOWS__) return true
+  
+  const now = new Date()
+  const start = new Date(currentPack.value.uploadStart)
+  const end = new Date(currentPack.value.uploadEnd)
+  return now >= start && now <= end
+})
+
+const isInSubmissionPhase = computed(() => {
+  if (!currentPack.value) return false
+  if ((globalThis as any).__DEV_BYPASS_TIME_WINDOWS__) return true
+  
+  const now = new Date()
+  const start = new Date(currentPack.value.startDate)
+  const end = new Date(currentPack.value.endDate)
+  return now >= start && now <= end
+})
+
+const showSubmitTrack = computed(() => {
+  // allow submission when in submission phase or when the dev bypass is enabled
+  return isInSubmissionPhase.value || (globalThis as any).__DEV_BYPASS_TIME_WINDOWS__
+})
+
 const logout = async () => {
   auth.logout(router)
 }
+
+// fetch current pack info on mount
+onMounted(async () => {
+  try {
+    if (isAuthenticated.value) {
+      const response = await api.packs.get(1) // assuming pack ID 1 is the current pack
+      currentPack.value = response.data
+    }
+  } catch (e) {
+    console.error('Failed to fetch current pack:', e)
+  } finally {
+    loading.value = false
+  }
+})
 </script>
 
 <template>
@@ -44,7 +87,9 @@ const logout = async () => {
                 Upload Samples
               </router-link>
               
+              <!-- Only show Submit Track during submission phase -->
               <router-link 
+                v-if="showSubmitTrack"
                 to="/tracks/submit"
                 class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
                 :class="{ 'border-blue-500 text-gray-900': $route.path.startsWith('/tracks/submit') }"

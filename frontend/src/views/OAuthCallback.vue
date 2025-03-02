@@ -40,7 +40,9 @@ onMounted(async () => {
     // Handle OAuth code by redirecting to backend
     if (code && provider) {
       // Get base URL without /api suffix
-      const baseUrl = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:8080'
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api'
+      const baseUrl = apiUrl.endsWith('/api') ? apiUrl.slice(0, -4) : apiUrl
+      
       // Redirect to backend OAuth callback with state parameter
       const callbackUrl = new URL(`${baseUrl}/api/auth/oauth/${provider}/callback`)
       callbackUrl.searchParams.set('code', code)

@@ -41,6 +41,14 @@ func Init(r *gin.Engine, store storage.Storage, cfg *config.Config) {
 	// Initialize routes
 	api := r.Group("/api")
 
+	// Health check endpoint
+	api.GET("/health", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{
+			"status":    "ok",
+			"timestamp": time.Now().Format(time.RFC3339),
+		})
+	})
+
 	// Auth routes
 	auth := api.Group("/auth")
 	{

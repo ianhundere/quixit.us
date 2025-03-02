@@ -28,7 +28,7 @@
         </div>
         
         <!-- Sample Upload Section -->
-        <div v-if="isInUploadPhase || __DEV_BYPASS_TIME_WINDOWS__" class="mt-6">
+        <div v-if="isInUploadPhase || (globalThis as any).__DEV_BYPASS_TIME_WINDOWS__" class="mt-6">
           <SampleUpload
             :packId="currentPack?.ID"
             :uploadStart="currentPack?.uploadStart"
@@ -62,7 +62,7 @@
         </div>
 
         <!-- Song Submission Section -->
-        <div v-if="isInCreationPhase || __DEV_BYPASS_TIME_WINDOWS__" class="mt-6">
+        <div v-if="isInCreationPhase || (globalThis as any).__DEV_BYPASS_TIME_WINDOWS__" class="mt-6">
           <div v-if="loading" class="text-center py-4">
             Loading submissions...
           </div>
@@ -126,7 +126,7 @@ const downloading = ref(false)
 // Compute current phase
 const isInUploadPhase = computed(() => {
   if (!currentPack.value) return false
-  if (__DEV_BYPASS_TIME_WINDOWS__) return true
+  if ((globalThis as any).__DEV_BYPASS_TIME_WINDOWS__) return true
   
   const now = new Date()
   const start = new Date(currentPack.value.uploadStart)
@@ -136,7 +136,7 @@ const isInUploadPhase = computed(() => {
 
 const isInCreationPhase = computed(() => {
   if (!currentPack.value) return false
-  if (__DEV_BYPASS_TIME_WINDOWS__) return true
+  if ((globalThis as any).__DEV_BYPASS_TIME_WINDOWS__) return true
   
   const now = new Date()
   const start = new Date(currentPack.value.startDate)
@@ -146,7 +146,7 @@ const isInCreationPhase = computed(() => {
 
 const isPastUploadPhase = computed(() => {
   if (!currentPack.value) return false
-  if (__DEV_BYPASS_TIME_WINDOWS__) return false
+  if ((globalThis as any).__DEV_BYPASS_TIME_WINDOWS__) return false
   
   const now = new Date()
   const end = new Date(currentPack.value.uploadEnd)
@@ -155,7 +155,7 @@ const isPastUploadPhase = computed(() => {
 
 const isPastCreationPhase = computed(() => {
   if (!currentPack.value) return false
-  if (__DEV_BYPASS_TIME_WINDOWS__) return false
+  if ((globalThis as any).__DEV_BYPASS_TIME_WINDOWS__) return false
   
   const now = new Date()
   const end = new Date(currentPack.value.endDate)

@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
+import { api } from '@/api';
 
 const router = createRouter({
     history: createWebHistory(),
@@ -77,7 +78,7 @@ const router = createRouter({
 })
 
 // Navigation guard
-router.beforeEach(async (to, from, next) => {
+router.beforeEach(async (to: any, from: any, next: any) => {
     const auth = useAuthStore()
     const token = localStorage.getItem('token')
 
@@ -106,6 +107,44 @@ router.beforeEach(async (to, from, next) => {
     if (to.meta.guest && token) {
         next('/')
         return
+    }
+
+    // Additional guard for track submission route
+    if (to.name === 'submit-track' && auth.user) {
+        try {
+            // Fail-safe: add a direct check/redirect at the router level for additional security
+            if (window.location.pathname === "/tracks/submit") {
+                // Check if bypass is explicitly false to always redirect
+                if (
+                    (window as any).__DEV_BYPASS_TIME_WINDOWS__ === false || 
+                    (globalThis as any).__DEV_BYPASS_TIME_WINDOWS__ === false
+                ) {
+                    console.log('Track submission is not allowed - time windows bypass is false')
+                    return next('/')
+                }
+            }
+            
+            // check if bypass is enabled, if yes allow
+            if ((globalThis as any).__DEV_BYPASS_TIME_WINDOWS__ === true) {
+                return next()
+            }
+            
+            // otherwise, check if we're in submission phase
+            const response = await api.packs.get(1) // assuming pack ID 1 is the current pack
+            const pack = response.data
+            
+            const now = new Date()
+            const start = new Date(pack.startDate)
+            const end = new Date(pack.endDate)
+            const isInSubmissionPhase = now >= start && now <= end
+            
+            if (!isInSubmissionPhase) {
+                console.log('Track submission is not allowed outside of submission phase')
+                return next('/')
+            }
+        } catch (e) {
+            console.error('Failed to verify submission phase:', e)
+        }
     }
 
     next()

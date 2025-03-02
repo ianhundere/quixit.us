@@ -21,12 +21,15 @@ services:
         build:
             context: .
             dockerfile: Dockerfile
+            args:
+                HOST_DOMAIN: ${HOST_DOMAIN}
+                HOST_PORT: 3000
         depends_on:
             postgres:
                 condition: service_healthy
         environment:
             # Server settings
-            PORT: 8080
+            PORT: 3000
             GIN_MODE: debug
             
             # Development settings
@@ -51,9 +54,11 @@ services:
             
             # OAuth settings
             BYPASS_OAUTH: "true"
-            OAUTH_REDIRECT_URL: http://localhost:8080/auth/callback
+            OAUTH_REDIRECT_URL: http://${HOST_DOMAIN}:3000/auth/callback
+            HOST_DOMAIN: ${HOST_DOMAIN}
+            HOST_PORT: 3000
         ports:
-            - '8080:8080'
+            - '3000:3000'
         volumes:
             - ./storage:/app/storage
             - ./.env.docker:/app/.env

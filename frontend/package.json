@@ -25,8 +25,8 @@
     },
     "devDependencies": {
         "@tsconfig/node18": "^18.2.2",
-        "@types/node": "^20.11.16",
-        "@vitejs/plugin-vue": "^5.0.3",
+        "@types/node": "^20.17.22",
+        "@vitejs/plugin-vue": "^5.2.1",
         "@vitest/coverage-v8": "^1.6.0",
         "@vue/test-utils": "^2.4.4",
         "@vue/tsconfig": "^0.5.1",
@@ -35,7 +35,7 @@
         "postcss": "^8.4.33",
         "tailwindcss": "^3.4.1",
         "typescript": "^5.3.3",
-        "vite": "^5.0.12",
+        "vite": "^5.4.14",
         "vitest": "^1.6.0",
         "vue-tsc": "^1.8.27"
     }
