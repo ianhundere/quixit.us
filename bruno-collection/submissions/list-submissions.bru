@@ -1,0 +1,23 @@
+meta {
+  name: "List Submissions"
+  type: "http"
+  seq: 1
+}
+
+get {
+  url: {{base_url}}/api/submissions?pack_id={{pack_id}}
+}
+
+headers {
+  Authorization: Bearer {{auth_token}}
+}
+
+tests {
+  test("should return 200", function() {
+    expect(res.status).to.equal(200)
+  })
+
+  test("should return array of submissions", function() {
+    expect(Array.isArray(res.body)).to.equal(true)
+  })
+} 

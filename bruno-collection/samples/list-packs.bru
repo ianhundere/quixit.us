@@ -1,0 +1,24 @@
+meta {
+  name: "List Sample Packs"
+  type: "http"
+  seq: 1
+}
+
+get {
+  url: {{base_url}}/api/samples/packs
+}
+
+headers {
+  Authorization: Bearer {{auth_token}}
+}
+
+tests {
+  test("should return 200", function() {
+    expect(res.status).to.equal(200)
+  })
+
+  test("should return current and past packs", function() {
+    expect(res.body).to.have.property('currentPack')
+    expect(res.body).to.have.property('pastPacks')
+  })
+}

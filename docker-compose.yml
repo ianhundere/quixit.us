@@ -1,0 +1,68 @@
+# Development-only docker-compose configuration
+# Do not use these settings in production
+services:
+    postgres:
+        image: postgres:15
+        environment:
+            POSTGRES_USER: postgres
+            POSTGRES_PASSWORD: postgres
+            POSTGRES_DB: sample_exchange
+        ports:
+            - '5432:5432'
+        volumes:
+            - postgres_data:/var/lib/postgresql/data
+        healthcheck:
+            test: ['CMD-SHELL', 'pg_isready -U postgres']
+            interval: 5s
+            timeout: 5s
+            retries: 5
+
+    quixit:
+        build:
+            context: .
+            dockerfile: Dockerfile
+            args:
+                HOST_DOMAIN: ${HOST_DOMAIN}
+                HOST_PORT: 3000
+        depends_on:
+            postgres:
+                condition: service_healthy
+        environment:
+            # Server settings
+            PORT: 3000
+            GIN_MODE: debug
+            
+            # Development settings
+            DEV_MODE: "true"
+            DEV_BYPASS_TIME_WINDOWS: "true"
+            
+            # Database settings
+            DB_HOST: postgres
+            DB_PORT: 5432
+            DB_USER: postgres
+            DB_PASSWORD: postgres
+            DB_NAME: sample_exchange
+            DB_SSLMODE: disable
+            
+            # Storage settings
+            STORAGE_PATH: /app/storage
+            
+            # JWT settings
+            JWT_SECRET: ${JWT_SECRET:-KYdPVmN+lbIV/mMoynsv1agOkf/eF70arCgNAratd+o=}
+            JWT_ACCESS_DURATION: 15m
+            JWT_REFRESH_DURATION: 168h
+            
+            # OAuth settings
+            BYPASS_OAUTH: "true"
+            OAUTH_REDIRECT_URL: http://${HOST_DOMAIN}:3000/auth/callback
+            HOST_DOMAIN: ${HOST_DOMAIN}
+            HOST_PORT: 3000
+        ports:
+            - '3000:3000'
+        volumes:
+            - ./storage:/app/storage
+            - ./.env.docker:/app/.env
+
+volumes:
+    postgres_data:
+        name: quixit_postgres_data

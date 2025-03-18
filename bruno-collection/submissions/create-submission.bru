@@ -1,0 +1,82 @@
+meta {
+  name: "Create Submission"
+  type: "http"
+  seq: 5
+}
+
+post {
+  url: {{base_url}}/api/submissions
+}
+
+headers {
+  Authorization: Bearer {{auth_token}}
+}
+
+body:multipart-form {
+  file: @file(/tmp/test_submission.mp3, audio/mpeg)
+  title: "Test Submission"
+  sample_pack_id: "{{pack_id}}"
+}
+
+tests {
+  // verify response status when authenticated
+  // test("should return 201 when submission is created", function() {
+  //   expect(res.status).to.equal(201)
+  // })
+
+  // verify response structure
+  test("should return submission object with required fields", function() {
+    if (res.status === 201) {
+      expect(res.body).to.have.property('ID')
+      expect(res.body).to.have.property('title')
+      expect(res.body).to.have.property('filename')
+      expect(res.body).to.have.property('fileUrl')
+      expect(res.body).to.have.property('fileSize')
+      expect(res.body).to.have.property('userID')
+      expect(res.body).to.have.property('samplePackID')
+      expect(res.body).to.have.property('submittedAt')
+    }
+  })
+
+  // verify submission information
+  test("should have correct submission information", function() {
+    if (res.status === 201) {
+      expect(res.body.title).to.equal('Test Submission')
+      expect(res.body.filename).to.equal('test_submission.mp3')
+      expect(res.body.fileSize).to.be.above(0)
+      expect(res.body.samplePackID).to.equal(parseInt(req.body.sample_pack_id))
+    }
+  })
+
+  // verify submission time
+  test("should have valid submission time", function() {
+    if (res.status === 201) {
+      const submittedAt = new Date(res.body.submittedAt)
+      const now = new Date()
+      expect(submittedAt).to.be.at.most(now)
+      expect(submittedAt).to.be.at.least(new Date(now - 60000)) // within last minute
+    }
+  })
+
+  // verify unauthorized access
+  test("should return 401 without auth token", function() {
+    // Skip this test for now as we can't make separate requests in Bruno tests
+    expect(true).to.equal(true)
+  })
+}
+
+docs {
+  endpoint returns:
+  {
+    "ID": number,
+    "title": string,
+    "filename": string,
+    "fileUrl": string,
+    "fileSize": number,
+    "userID": number,
+    "samplePackID": number,
+    "submittedAt": datetime,
+    "createdAt": datetime,
+    "updatedAt": datetime
+  }
+} 

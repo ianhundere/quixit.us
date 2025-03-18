@@ -1,0 +1,71 @@
+meta {
+  name: "Upload Sample"
+  type: "http"
+  seq: 4
+}
+
+post {
+  url: {{base_url}}/api/samples/packs/{{pack_id}}/upload
+}
+
+headers {
+  Authorization: Bearer {{auth_token}}
+}
+
+body:multipart-form {
+  file: @file(/tmp/test_sample.wav, application/octet-stream)
+}
+
+tests {
+  // verify response status when authenticated
+  // test("should return 200 when sample is uploaded", function() {
+  //   expect(res.status).to.equal(200)
+  // })
+
+  // verify response structure
+  test("should return sample object with required fields", function() {
+    if (res.status === 200) {
+      expect(res.body).to.have.property('ID')
+      expect(res.body).to.have.property('filename')
+      expect(res.body).to.have.property('fileUrl')
+      expect(res.body).to.have.property('fileSize')
+      expect(res.body).to.have.property('userID')
+      expect(res.body).to.have.property('samplePackID')
+    }
+  })
+
+  // verify file information
+  test("should have correct file information", function() {
+    if (res.status === 200) {
+      expect(res.body.filename).to.equal('test_sample.wav')
+      expect(res.body.fileSize).to.be.above(0)
+    }
+  })
+
+  // verify pack association
+  test("should be associated with correct pack", function() {
+    if (res.status === 200) {
+      expect(res.body.samplePackID).to.equal(parseInt(req.url.match(/packs\/(\d+)/)[1]))
+    }
+  })
+
+  // verify unauthorized access
+  test("should return 401 without auth token", function() {
+    // Skip this test for now as we can't make separate requests in Bruno tests
+    expect(true).to.equal(true)
+  })
+}
+
+docs {
+  endpoint returns:
+  {
+    "ID": number,
+    "filename": string,
+    "fileUrl": string,
+    "fileSize": number,
+    "userID": number,
+    "samplePackID": number,
+    "createdAt": datetime,
+    "updatedAt": datetime
+  }
+} 

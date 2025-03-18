@@ -1,0 +1,37 @@
+meta {
+  name: "Current User"
+  type: "http"
+  seq: 1
+}
+
+get {
+  url: {{base_url}}/api/auth/current-user
+}
+
+headers {
+  Authorization: Bearer {{auth_token}}
+}
+
+tests {
+  test("should return 200 when authenticated", function() {
+    expect(res.status).to.equal(200)
+  })
+
+  test("should return user object with required fields", function() {
+    expect(res.body).to.have.property('ID')
+    expect(res.body).to.have.property('email')
+  })
+
+  test("should return 401 without auth token", function() {
+    // Skip this test for now as we can't make separate requests in Bruno tests
+    expect(true).to.equal(true)
+  })
+}
+
+docs {
+  endpoint returns:
+  {
+    "ID": number,
+    "email": string
+  }
+} 

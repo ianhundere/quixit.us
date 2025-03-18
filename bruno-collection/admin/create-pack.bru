@@ -1,0 +1,62 @@
+meta {
+  name: "Create New Pack"
+  type: "http"
+  seq: 1
+}
+
+post {
+  url: {{base_url}}/api/admin/packs
+}
+
+body {
+  {
+    "title": "Sample Pack 1",
+    "description": "A collection of samples for testing"
+  }
+}
+
+headers {
+  Authorization: Bearer {{auth_token}}
+}
+
+tests {
+  test("should return 201 when authenticated", function() {
+    expect(res.status).to.equal(201)
+  })
+
+  test("should return pack object with required fields", function() {
+    expect(res.body).to.have.property("ID")
+    expect(res.body).to.have.property("title")
+    expect(res.body).to.have.property("description")
+  })
+
+  test("should set isActive to true", function() {
+    expect(res.body.isActive).to.equal(true)
+  })
+
+  test("should match input data", function() {
+    expect(res.body.title).to.equal("Sample Pack 1")
+    expect(res.body.description).to.equal("A collection of samples for testing")
+  })
+
+  test("should set future dates", function() {
+    expect(res.body).to.have.property("createdAt")
+    expect(res.body).to.have.property("updatedAt")
+  })
+}
+
+docs {
+  endpoint returns:
+  {
+    "ID": number,
+    "title": string,
+    "description": string,
+    "uploadStart": datetime,
+    "uploadEnd": datetime,
+    "startDate": datetime,
+    "endDate": datetime,
+    "isActive": boolean,
+    "samples": array,
+    "submissions": array
+  }
+} 
